@@ -36,7 +36,7 @@ npx wrangler dev   # เปิดเว็บพร้อม Worker ที่ ht
 ตั้ง Cloudflare Workers Builds เชื่อมกับสาขา `main` (push/merge เข้า main แล้ว deploy อัตโนมัติ)
 
 - Worker name: `school-announcement`
-- Build command: เว้นว่างได้ (`wrangler deploy` รัน `npm run build` เองตาม `build.command` ใน `wrangler.jsonc`)
+- Build command: `npm run build`
 - Deploy command: `npx wrangler deploy`
 - Root directory: `/`
 - Node.js: 22.13 ขึ้นไป
