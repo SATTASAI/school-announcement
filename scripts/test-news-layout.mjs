@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {pickPhotos,pickTheme} from '../lib/news-layout.ts';
-import {prApi} from '../lib/pr-api.ts';
+import {prApi} from '../worker/pr-api.ts';
 const photos=Array.from({length:20},(_,i)=>({id:i+1,width:i===4?100:1600,height:i===4?100:1000}));
 const picked=pickPhotos(photos,7);
 assert.equal(picked.length,4);assert.equal(new Set(picked).size,4);

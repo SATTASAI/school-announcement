@@ -13,36 +13,30 @@
 
 ฉบับร่างบันทึกใน localStorage บนอุปกรณ์นี้ รุ่นใหม่ย้ายเฉพาะข่าวเดิมที่มีอัลบั้มและภาพ พร้อมเก็บข้อความที่ผู้ใช้มีไว้แล้ว ข้อมูลเดิมรุ่น v1 ไม่ถูกลบทิ้ง
 
+## โครงสร้าง
+
+- `src/` หน้าเว็บ React (Vite) → build เป็นไฟล์ static ใน `dist/`
+- `lib/` จัดภาพ/แม่แบบ และวาดใบข่าวด้วย canvas (ทำงานในเบราว์เซอร์)
+- `worker/` Cloudflare Worker: ตอบ `/api/pr/*` (proxy อ่านอย่างเดียวไปเว็บกิจกรรม) ที่เหลือส่งไฟล์จาก `dist/`
+
+ไม่มีฐานข้อมูล storage หรือ API Key
+
 ## Development
 
 ```sh
-npm ci
-npm run dev
+npm install
+npm test
+npm run build      # tsc + vite build → dist/
+npx wrangler dev   # เปิดเว็บพร้อม Worker ที่ http://localhost:8787
 ```
-
-```sh
-node node_modules/typescript/bin/tsc --noEmit
-node --experimental-strip-types scripts/test-news-layout.mjs
-npm run build
-```
-
-ใช้ React 19 / Vinext / Cloudflare Workers และ canvas สำหรับจัดหน้า A4 ภาพใช้ proxy แบบอ่านอย่างเดียว จำกัดไปยังเว็บกิจกรรมโรงเรียน ข้อความที่วางถูกส่งลง canvas ตามเดิม ไม่มีการเรียบเรียงใหม่ ข้อความยาวเกินพื้นที่จะรายงานให้ย่อก่อนส่งออก
 
 ## Deploy บน Cloudflare Workers
 
-รีโปใช้ Cloudflare Workers Builds เชื่อมกับสาขา `main`
+ตั้ง Cloudflare Workers Builds เชื่อมกับสาขา `main` (push/merge เข้า main แล้ว deploy อัตโนมัติ)
 
 - Worker name: `school-announcement`
 - Build command: `npm run build`
-- Deploy command: `npm run deploy`
+- Deploy command: `npx wrangler deploy`
 - Root directory: `/`
-- Node.js: 22.13 ขึ้นไป (แนะนำ 22)
-- Custom domain: `school-announcement.banpadengschool.ac.th`
-
-Cloudflare ต้องมี zone `banpadengschool.ac.th` และสิทธิ์สร้าง Worker/Custom Domain ระบบออกใบรับรอง HTTPS ให้เมื่อโดเมนพร้อมใช้งาน เมื่อเชื่อมรีโปแล้ว push เข้า main จะอัปเดตเว็บอัตโนมัติ
-
-ทดสอบแพ็กเกจก่อน deploy ได้ด้วย `npm run build` และ `npx wrangler deploy --config dist/server/wrangler.json --dry-run` ไม่ต้องใช้ OpenAI API Key และไม่ต้องตั้งค่าฐานข้อมูลหรือ storage
-
-`vite.config.ts` และ `worker/cloudflare.ts` เป็นเส้นทาง build/deploy แบบ standalone โดยไม่เรียก Sites authentication หรือบริการ preview ของ ChatGPT ไฟล์ `.openai/hosting.json` เป็นข้อมูลอ้างอิงโฮสต์เดิมและไม่ถูกใช้โดย Cloudflare build นี้
-
-ไม่ควร commit ไฟล์ .env, ข้อมูล runtime, node_modules หรือไฟล์ภาพต้นฉบับจากผู้ใช้
+- Node.js: 22.13 ขึ้นไป
+- Custom domain: `school-announcement.banpadengschool.ac.th` (ตั้งใน `wrangler.jsonc`, Cloudflare สร้าง DNS และ HTTPS ให้เอง)

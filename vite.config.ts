@@ -1,15 +1,9 @@
-import vinext from 'vinext';
 import {defineConfig} from 'vite';
-import {cloudflare} from '@cloudflare/vite-plugin';
+import react from '@vitejs/plugin-react';
 
-// Standalone Cloudflare build: no Sites account, preview service or AI key.
+// Frontend only. The Worker (worker/index.ts) is bundled by `wrangler deploy`
+// and serves dist/ as static assets, handling /api/pr/* itself.
 export default defineConfig({
- plugins:[
-  vinext(),
-  cloudflare({
-   configPath:'./wrangler.jsonc',
-   viteEnvironment:{name:'rsc',childEnvironments:['ssr']},
-   inspectorPort:false,
-  }),
- ],
+ plugins:[react()],
+ server:{proxy:{'/api':'http://127.0.0.1:8787'}},
 });

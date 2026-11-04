@@ -1,9 +1,8 @@
-'use client';
 import {useState,useEffect} from 'react';
 import {Plus,Trash2,Images,Download,Check,ArrowRight,LayoutTemplate,Newspaper,Settings2,Loader2,X,RefreshCw,FolderOpen,ChevronRight} from 'lucide-react';
-import {themes,png,download,zipStore} from '@/lib/news-render';
-import {pickPhotos,pickTheme} from '@/lib/news-layout';
-import type {ActivityPhoto} from '@/lib/news-layout';
+import {themes,png,download,zipStore} from '../lib/news-render';
+import {pickPhotos,pickTheme} from '../lib/news-layout';
+import type {ActivityPhoto} from '../lib/news-layout';
 
 type News={id:string;album:any;photos:ActivityPhoto[];selected:number[];theme:string;headline:string;body:string;date:string};
 const STORAGE='padeng-pr-layout-v2';
