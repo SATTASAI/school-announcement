@@ -3,6 +3,7 @@
 // ใช้บัญชี Drive เดียวกับระบบโรงเรียน (OAuth refresh token แบบเว็บกิจกรรม)
 
 import {PHOTO_PATTERNS,DEFAULT_DIRECTOR,safeRect,safeText,type PhotoPattern,type Rect,type PageLayout} from '../lib/design-layout.ts';
+import {validateManifest} from '../lib/template-manifest.ts';
 export interface DriveEnv {
  GOOGLE_DRIVE_CLIENT_ID?: string;
  GOOGLE_DRIVE_CLIENT_SECRET?: string;
@@ -82,7 +83,20 @@ async function loadTemplates(env:DriveEnv){
  if(cfg){const text=await (await drive(env,`/files/${cfg.id}?alt=media&supportsAllDrives=true`)).text();try{config=JSON.parse(text.replace(/^\uFEFF/,''));}catch{throw new Error('templates.json ใน Drive อ่านไม่ได้ (รูปแบบ JSON ไม่ถูกต้อง)');}}
  const stateFile=files.find((f:any)=>f.name==='template-visibility.json');let hiddenBuiltinIds:string[]=[];
  if(stateFile){const s=JSON.parse(await(await drive(env,`/files/${stateFile.id}?alt=media&supportsAllDrives=true`)).text());if(Array.isArray(s.hiddenBuiltinIds))hiddenBuiltinIds=s.hiddenBuiltinIds.filter((x:unknown)=>typeof x==='string'&&/^(blue|forest|editorial|reference:[0-9]{2})$/.test(x));}
- return {templates:buildTemplates(files,config).map(t=>({...t,createdAt:Date.parse(files.find((f:any)=>f.id===t.fileId)?.createdTime)||0})),hiddenBuiltinIds,visibilityFileId:stateFile?.id||''};
+ // A sidecar overrides legacy data for its matching image; invalid sidecars never silently use default slots.
+ const warnings:string[]=[];const overrides=new Map<string,DriveTemplate|null>();
+ const sidecars=files.filter((f:any)=>f.name.endsWith('.template.json')&&f.name!=='template-visibility.json');
+ const grouped=new Map<string,any[]>();for(const sidecar of sidecars){const fileName=sidecar.name.slice(0,-'.template.json'.length);grouped.set(fileName,[...(grouped.get(fileName)||[]),sidecar]);}
+ await Promise.all([...grouped].map(async([fileName,group])=>{
+  const matches=files.filter((f:any)=>f.name===fileName&&/^image\/(png|jpeg|webp)$/.test(f.mimeType));
+  if(group.length!==1||matches.length!==1){warnings.push(fileName+': มีไฟล์ภาพหรือไฟล์กำกับซ้ำ หรือไม่พบภาพ');for(const image of matches)overrides.set(image.id,null);return;}
+  const image=matches[0];try{
+   const response=await drive(env,`/files/${group[0].id}?alt=media&supportsAllDrives=true`);const definition=validateManifest(JSON.parse((await response.text()).replace(/^\uFEFF/,'')),fileName);
+   overrides.set(image.id,{id:'drive:'+image.id,fileId:image.id,fromConfig:true,name:definition.name,...structuredClone(DEFAULT_SLOTS),locked:true,photoCount:definition.layout.photos.length,fixedLayout:definition.layout});
+  }catch(e){overrides.set(image.id,null);warnings.push(fileName+': '+(e instanceof Error?e.message:'อ่านไฟล์กำกับไม่ได้'));}
+ }));
+ const templates=buildTemplates(files,config).map(t=>overrides.has(t.fileId)?overrides.get(t.fileId):t).filter((t):t is DriveTemplate=>!!t).map(t=>({...t,createdAt:Date.parse(files.find((f:any)=>f.id===t.fileId)?.createdTime)||0}));
+ return {templates,hiddenBuiltinIds,visibilityFileId:stateFile?.id||'',warnings};
 }
 
 export async function templatesApi(req:Request,env:DriveEnv,ctx?:{waitUntil(p:Promise<unknown>):void}):Promise<Response|null>{
@@ -137,6 +151,7 @@ export async function syncTemplates(env:DriveEnv,assets:{fetch(r:Request):Promis
  if(!put.ok)throw new Error('update templates.json '+put.status);
  return {uploaded,templates:merged.length};
 }
+
 
 
 
