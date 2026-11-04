@@ -26,7 +26,8 @@
 ```sh
 npm install
 npm test
-npm run build      # tsc + vite build → dist/
+npm run typecheck
+npm run build      # vite build → dist/
 npx wrangler dev   # เปิดเว็บพร้อม Worker ที่ http://localhost:8787
 ```
 
