@@ -119,12 +119,12 @@ export async function seedTemplates(env:DriveEnv,assets:{fetch(r:Request):Promis
  for(const name of SEED){
   if(existing.has(name))continue;
   const r=await assets.fetch(new Request('https://assets.local/seed-templates/'+name));
-  if(!r.ok)throw new Error('missing seed '+name);
+  if(!r.ok||!/(png|json)/.test(r.headers.get('content-type')||''))throw new Error('missing seed '+name+' '+r.status+' '+r.headers.get('content-type'));
   const mime=name.endsWith('.json')?'application/json':'image/png';
   const boundary='seed_'+crypto.randomUUID();
   const body=new Blob([`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({name,mimeType:mime,parents:[env.TEMPLATE_DRIVE_FOLDER_ID]})}\r\n--${boundary}\r\nContent-Type: ${mime}\r\n\r\n`,await r.arrayBuffer(),`\r\n--${boundary}--`]);
   const up=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'multipart/related; boundary='+boundary},body});
-  if(!up.ok)throw new Error('upload '+name+' '+up.status);
+  if(!up.ok)throw new Error('upload '+name+' '+up.status+': '+(await up.text()).slice(0,300));
  }
  return 'seeded';
 }

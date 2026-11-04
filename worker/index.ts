@@ -5,6 +5,10 @@ interface Env extends DriveEnv {ASSETS:{fetch(request:Request):Promise<Response>
 
 export default {
  async fetch(request:Request,env:Env,ctx:{waitUntil(p:Promise<unknown>):void}):Promise<Response>{
+  const u=new URL(request.url);
+  if(u.pathname==='/api/pr/templates/seed'){ // ชั่วคราว: นำแม่แบบชุดแรกขึ้น Drive
+   try{return Response.json({result:await seedTemplates(env,env.ASSETS)});}catch(e){return Response.json({error:e instanceof Error?e.message:String(e)},{status:500});}
+  }
   return (await templatesApi(request,env,ctx))
    ?? (await prApi(request,env as unknown as Record<string,unknown>))
    ?? env.ASSETS.fetch(request);
