@@ -2,9 +2,10 @@ import assert from 'node:assert/strict';
 import {pickPhotos,pickTheme,shuffleTemplate} from '../lib/news-layout.ts';
 import {prApi} from '../worker/pr-api.ts';
 import {buildTemplates,templatesApi} from '../worker/templates.ts';
+import {PHOTO_PATTERNS,photoFrames,safeRect,safeCrop,DEFAULT_DIRECTOR,normaliseLayout} from '../lib/design-layout.ts';
 const photos=Array.from({length:20},(_,i)=>({id:i+1,width:i===4?100:1600,height:i===4?100:1000}));
 const picked=pickPhotos(photos,7);
-assert.equal(picked.length,4);assert.equal(new Set(picked).size,4);
+assert.equal(picked.length,6);assert.equal(new Set(picked).size,6);
 assert.ok(!picked.includes(5));assert.ok(Math.max(...picked)-Math.min(...picked)>10);
 assert.deepEqual(pickPhotos([],1),[]);
 assert.deepEqual(pickPhotos([{id:2},{id:2},{id:-1}]),[2]);
@@ -53,4 +54,22 @@ assert.deepEqual(shuffleTemplate([],current,state),{theme:current,state:{pool:[]
 assert.equal(shuffleTemplate(['blue','blue'],'blue').theme,'blue');
 assert.equal(shuffleTemplate(['blue','drive:new'],'blue',{pool:['blue','drive:new'],remaining:['drive:new','drive:new','missing']}).theme,'drive:new');
 console.log('Shuffle: 24 templates, five non-repeating rounds, round boundaries, persisted progress, catalogue changes passed.');
+
+// All adaptive grids retain every photo and stay disjoint at every supported count.
+const area={x:90,y:440,w:1060,h:770};
+for(const pattern of PHOTO_PATTERNS)for(let count=1;count<=6;count++){
+ const frames=photoFrames(area,count,pattern);assert.equal(frames.length,count);
+ for(const r of frames){assert(r.w>0&&r.h>0);assert(r.x>=area.x-.001&&r.y>=area.y-.001);assert(r.x+r.w<=area.x+area.w+.001&&r.y+r.h<=area.y+area.h+.001);}
+ for(let i=0;i<frames.length;i++)for(let j=i+1;j<frames.length;j++){
+  const a=frames[i],b=frames[j];assert(a.x+a.w<=b.x+.001||b.x+b.w<=a.x+.001||a.y+a.h<=b.y+.001||b.y+b.h<=a.y+.001,pattern+' overlaps at '+count);
+ }
+}
+assert.deepEqual(safeCrop({x:9,y:-8,zoom:20}),{x:1,y:-1,zoom:4});
+const bounded=safeRect({x:1200,y:1710,w:500,h:500},DEFAULT_DIRECTOR);assert(bounded.x+bounded.w<=1240);assert(bounded.y+bounded.h<=1754);
+const base={headline:{x:50,y:300,w:1100,h:120,size:42,color:'#143d73',align:'left',font:'Noto Sans Thai'},body:{x:50,y:1250,w:1100,h:350,size:28,color:'#27364a',align:'left',font:'Noto Sans Thai'},director:DEFAULT_DIRECTOR,photos:photoFrames(area,6,'mosaic')};
+const restoredLayout=normaliseLayout({...base,headline:{...base.headline,x:NaN,size:Infinity},photos:photoFrames(area,3,'grid')},base);
+assert.equal(restoredLayout.headline.x,50);assert.equal(restoredLayout.headline.size,42);assert.equal(restoredLayout.photos.length,6);
+const modern=buildTemplates([{id:'modern-file',name:'modern.png',mimeType:'image/png'}],{templates:[{file:'modern.png',photoCount:6,director:{x:1010,y:20,w:160,h:190},photos:{pattern:'stair'}}]})[0];
+assert.equal(modern.photos.pattern,'stair');assert.equal(modern.photoCount,6);assert.equal(modern.director.x,1010);
+console.log('Design editor: 10 adaptive patterns × 1–6 photos, no overlap, bounds, crop limits, restored layouts and new template metadata passed.');
 
