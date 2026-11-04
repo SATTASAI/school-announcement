@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {pickPhotos,pickTheme} from '../lib/news-layout.ts';
+import {prApi} from '../lib/pr-api.ts';
+const photos=Array.from({length:20},(_,i)=>({id:i+1,width:i===4?100:1600,height:i===4?100:1000}));
+const picked=pickPhotos(photos,7);
+assert.equal(picked.length,4);assert.equal(new Set(picked).size,4);
+assert.ok(!picked.includes(5));assert.ok(Math.max(...picked)-Math.min(...picked)>10);
+assert.deepEqual(pickPhotos([],1),[]);
+assert.deepEqual(pickPhotos([{id:2},{id:2},{id:-1}]),[2]);
+assert.equal(pickPhotos(photos,7)[0],7);
+assert.equal(pickTheme(photos,'จิตอาสาปลูกป่า'),'forest');
+assert.equal(pickTheme([{id:1,width:1000,height:1600},{id:2,width:900,height:1500},{id:3,width:900,height:1500}]),'editorial');
+assert.equal(pickTheme(photos,'ประชุมผู้ปกครอง'),'blue');
+assert.equal(pickTheme([{id:1}]),'editorial');
+assert.equal((await prApi(new Request('https://school.test/api/pr/generate',{method:'POST'}),{})).status,404);
+assert.equal(await prApi(new Request('https://school.test/'),{}),null);
+console.log('Passed photo selection, duplicates, small-image rejection, orientation, template choice and removal of AI endpoint.');
