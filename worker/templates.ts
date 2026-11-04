@@ -2,7 +2,7 @@
 // และไฟล์ templates.json (ไม่บังคับ) บอกชื่อและตำแหน่งวางพาดหัว/ภาพ/เนื้อข่าว
 // ใช้บัญชี Drive เดียวกับระบบโรงเรียน (OAuth refresh token แบบเว็บกิจกรรม)
 
-import {PHOTO_PATTERNS,DEFAULT_DIRECTOR,safeRect,type PhotoPattern,type Rect} from '../lib/design-layout.ts';
+import {PHOTO_PATTERNS,DEFAULT_DIRECTOR,safeRect,safeText,type PhotoPattern,type Rect,type PageLayout} from '../lib/design-layout.ts';
 export interface DriveEnv {
  GOOGLE_DRIVE_CLIENT_ID?: string;
  GOOGLE_DRIVE_CLIENT_SECRET?: string;
@@ -13,7 +13,7 @@ export interface DriveEnv {
 export type Box = {x:number;y:number;w:number;h?:number;size?:number;color?:string};
 export type DriveTemplate = {
  id:string; name:string; fileId:string; fromConfig?:boolean;
- headline:Box; photos:Box&{h:number;layout?:'hero'|'grid';pattern?:PhotoPattern}; body:Box&{h:number};director?:Rect;photoCount?:number;
+ headline:Box; photos:Box&{h:number;layout?:'hero'|'grid';pattern?:PhotoPattern}; body:Box&{h:number};director?:Rect;photoCount?:number;locked?:boolean;fixedLayout?:PageLayout;
 };
 
 const CANVAS={w:1240,h:1754};
@@ -63,7 +63,10 @@ export function buildTemplates(files:{id:string;name:string;mimeType:string}[],c
  for(const t of listed){
   const f=images.find(i=>i.name===t?.file||i.id===t?.file);
   if(!f||used.has(f.id))continue;used.add(f.id);
-  out.push({id:'drive:'+f.id,fileId:f.id,fromConfig:true,name:String(t.name||f.name).slice(0,60),headline:box(t.headline,DEFAULT_SLOTS.headline),photos:{...box(t.photos,DEFAULT_SLOTS.photos),...(PHOTO_PATTERNS.includes(t.photos?.pattern)?{pattern:t.photos.pattern}: {})},body:box(t.body,DEFAULT_SLOTS.body),director:safeRect(t.director,DEFAULT_DIRECTOR),photoCount:Math.round(num(t.photoCount,3,6,4))});
+  const frames=t?.fixedLayout?.photos;const fixed=!!t.locked&&Array.isArray(frames)&&frames.length>=3&&frames.length<=6;
+  const defaultText={x:65,y:300,w:1110,h:150,size:40,color:'#143d73',align:'left' as const,font:'Noto Sans Thai' as const};
+  const fixedLayout:PageLayout|undefined=fixed?{headline:safeText(t.fixedLayout.headline,defaultText),body:safeText(t.fixedLayout.body,{...defaultText,y:1140,h:400,size:28}),director:safeRect(t.fixedLayout.director,DEFAULT_DIRECTOR),photos:frames.map((r:any)=>safeRect(r,{x:65,y:450,w:400,h:300}))}:undefined;
+  out.push({id:'drive:'+f.id,fileId:f.id,fromConfig:true,name:String(t.name||f.name).slice(0,60),headline:box(t.headline,DEFAULT_SLOTS.headline),photos:{...box(t.photos,DEFAULT_SLOTS.photos),...(PHOTO_PATTERNS.includes(t.photos?.pattern)?{pattern:t.photos.pattern}: {})},body:box(t.body,DEFAULT_SLOTS.body),director:safeRect(t.director,DEFAULT_DIRECTOR),photoCount:fixedLayout?fixedLayout.photos.length:Math.round(num(t.photoCount,3,6,4)),...(fixedLayout?{locked:true,fixedLayout}: {})});
  }
  for(const f of images)if(!used.has(f.id))out.push({id:'drive:'+f.id,fileId:f.id,name:f.name.replace(/\.[^.]+$/,'').slice(0,60),...structuredClone(DEFAULT_SLOTS)});
  return out;
@@ -139,5 +142,6 @@ export async function syncTemplates(env:DriveEnv,assets:{fetch(r:Request):Promis
  if(!put.ok)throw new Error('update templates.json '+put.status);
  return {uploaded,templates:merged.length};
 }
+
 
 
