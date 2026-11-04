@@ -67,7 +67,7 @@ export default function Page(){
   }});client.requestAccessToken({prompt:''});
  };
  const themeName=(id:string)=>allThemes.find(t=>t.id===id)?.name||(id.startsWith('drive:')?'แม่แบบจาก Drive':'');
- const loadDrive=async(refresh=false)=>{setDriveLoading(true);try{const r=await fetch('/api/pr/templates'+(refresh?'?refresh=1':''));const d:any=await r.json();if(!r.ok||d.error)throw Error(d.error||'โหลดแม่แบบจาก Google Drive ไม่สำเร็จ');setDriveTemplates(d.templates||[]);setDriveList(d.templates||[]);setHiddenBuiltinIds(Array.isArray(d.hiddenBuiltinIds)?d.hiddenBuiltinIds:[]);setVisibilityFileId(d.visibilityFileId||'');setDriveError('');}catch(e){setDriveError((e as Error).message||'โหลดแม่แบบจาก Google Drive ไม่สำเร็จ');}finally{setDriveLoading(false);}};
+ const loadDrive=async(refresh=false)=>{setDriveLoading(true);try{const r=await fetch('/api/pr/templates'+(refresh?'?refresh=1':''));const d:any=await r.json();if(!r.ok||d.error)throw Error(d.error||'โหลดแม่แบบจาก Google Drive ไม่สำเร็จ');setDriveTemplates(d.templates||[]);setDriveList(d.templates||[]);setHiddenBuiltinIds(Array.isArray(d.hiddenBuiltinIds)?d.hiddenBuiltinIds:[]);setVisibilityFileId(d.visibilityFileId||'');setDriveError(Array.isArray(d.warnings)&&d.warnings.length?'แม่แบบที่มีไฟล์กำกับผิดพลาด: '+d.warnings.join(' · '):'');}catch(e){setDriveError((e as Error).message||'โหลดแม่แบบจาก Google Drive ไม่สำเร็จ');}finally{setDriveLoading(false);}};
  useEffect(()=>{loadDrive();},[]);
  useEffect(()=>{const refresh=()=>{if(document.visibilityState==='visible')loadDrive(true);};document.addEventListener('visibilitychange',refresh);const timer=setInterval(refresh,60000);return()=>{document.removeEventListener('visibilitychange',refresh);clearInterval(timer);};},[]);
  useEffect(()=>{try{
@@ -138,5 +138,6 @@ export default function Page(){
   {preview&&<div className="overlay preview-overlay"><section className="preview-modal"><div className="preview-tools"><button className="secondary" onClick={()=>{window.print();if(previewTheme)recordUse([previewTheme]);}}>พิมพ์ / บันทึก PDF</button><button className="secondary" onClick={()=>setPreview(null)}>ปิด <X size={16}/></button></div><img className="print-news" src={preview} alt="ใบข่าวประชาสัมพันธ์ฉบับเต็ม"/></section></div>}
  </div>;
 }
+
 
 

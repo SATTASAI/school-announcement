@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "file": "school-news.png",
+  "name": "แม่แบบข่าวโรงเรียน",
+  "canvas": { "width": 1240, "height": 1754 },
+  "layout": {
+    "headline": { "x": 100, "y": 390, "w": 1040, "h": 110, "size": 42, "color": "#143d73", "align": "left", "font": "Noto Sans Thai" },
+    "body": { "x": 100, "y": 1240, "w": 1040, "h": 300, "size": 28, "color": "#27364a", "align": "left", "font": "Noto Sans Thai" },
+    "director": { "x": 1000, "y": 35, "w": 185, "h": 220 },
+    "photos": [
+      { "x": 100, "y": 535, "w": 610, "h": 650 },
+      { "x": 730, "y": 535, "w": 410, "h": 315 },
+      { "x": 730, "y": 870, "w": 410, "h": 315 }
+    ]
+  }
+}
