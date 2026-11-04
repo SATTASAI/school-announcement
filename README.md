@@ -23,7 +23,7 @@
 
 ## แม่แบบจาก Google Drive
 
-ภาพแม่แบบเก็บในโฟลเดอร์ Drive "แม่แบบข่าว (PR Studio)" (`TEMPLATE_DRIVE_FOLDER_ID` ใน `wrangler.jsonc`) บัญชีเดียวกับระบบโรงเรียน
+แม่แบบชุดแรก 5 แบบ (ต้นฉบับ `design/templates/build.py`) อยู่ในโฟลเดอร์แล้ว · ภาพแม่แบบเก็บในโฟลเดอร์ Drive "แม่แบบข่าว (PR Studio)" (`TEMPLATE_DRIVE_FOLDER_ID` ใน `wrangler.jsonc`) บัญชีเดียวกับระบบโรงเรียน
 Worker อ่านผ่าน `/api/pr/templates` (จำไว้ 10 นาที, กด "โหลดแม่แบบใหม่" ในหน้าแม่แบบเพื่อดึงทันที) และส่งภาพผ่าน `/api/pr/template/:fileId` เฉพาะไฟล์ในโฟลเดอร์นี้
 
 - ภาพพื้นหลัง PNG/JPG/WebP ขนาด A4 แนวตั้ง (แนะนำ 1240×1754)

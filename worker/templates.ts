@@ -107,24 +107,3 @@ export async function templatesApi(req:Request,env:DriveEnv,ctx?:{waitUntil(p:Pr
  return null;
 }
 
-// ---- นำแม่แบบชุดแรกขึ้น Drive (ครั้งเดียว ทำงานเมื่อโฟลเดอร์ยังไม่มีภาพเท่านั้น) ----
-const SEED=['navy-official.png','sky-bright.png','cream-gold.png','forest-green.png','violet-ceremony.png','templates.json'];
-export async function seedTemplates(env:DriveEnv,assets:{fetch(r:Request):Promise<Response>}){
- if(!driveReady(env))return 'drive not configured';
- const q=encodeURIComponent(`'${env.TEMPLATE_DRIVE_FOLDER_ID}' in parents and trashed=false`);
- const list:any=await (await drive(env,`/files?q=${q}&fields=files(id,name)&pageSize=100&supportsAllDrives=true&includeItemsFromAllDrives=true`)).json();
- const existing=new Set((list.files||[]).map((f:any)=>f.name));
- if(existing.has('templates.json'))return 'already seeded';
- const token=await accessToken(env);
- for(const name of SEED){
-  if(existing.has(name))continue;
-  const r=await assets.fetch(new Request('https://assets.local/seed-templates/'+name));
-  if(!r.ok||!/(png|json)/.test(r.headers.get('content-type')||''))throw new Error('missing seed '+name+' '+r.status+' '+r.headers.get('content-type'));
-  const mime=name.endsWith('.json')?'application/json':'image/png';
-  const boundary='seed_'+crypto.randomUUID();
-  const body=new Blob([`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({name,mimeType:mime,parents:[env.TEMPLATE_DRIVE_FOLDER_ID]})}\r\n--${boundary}\r\nContent-Type: ${mime}\r\n\r\n`,await r.arrayBuffer(),`\r\n--${boundary}--`]);
-  const up=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'multipart/related; boundary='+boundary},body});
-  if(!up.ok)throw new Error('upload '+name+' '+up.status+': '+(await up.text()).slice(0,300));
- }
- return 'seeded';
-}
