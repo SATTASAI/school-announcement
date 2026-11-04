@@ -84,6 +84,7 @@ const CACHE_LIST='https://templates.internal/list-v3';
 export async function templatesApi(req:Request,env:DriveEnv,ctx?:{waitUntil(p:Promise<unknown>):void}):Promise<Response|null>{
  const u=new URL(req.url);
  if(req.method!=='GET')return null;
+ if(u.pathname==='/api/pr/templates/google-client')return json({clientId:env.GOOGLE_DRIVE_CLIENT_ID||''});
  if(u.pathname==='/api/pr/templates'){
   if(!driveReady(env))return json({templates:[],configured:false});
   const cache=(globalThis as any).caches?.default as Cache|undefined;
@@ -138,4 +139,5 @@ export async function syncTemplates(env:DriveEnv,assets:{fetch(r:Request):Promis
  if(!put.ok)throw new Error('update templates.json '+put.status);
  return {uploaded,templates:merged.length};
 }
+
 
