@@ -109,3 +109,31 @@ export async function templatesApi(req:Request,env:DriveEnv,ctx?:{waitUntil(p:Pr
  return null;
 }
 
+
+// ---- ชั่วคราว: เพิ่มแม่แบบชุดใหม่ขึ้น Drive และรวมตำแหน่งเข้า templates.json (ไม่ลบของเดิม) ----
+export async function syncTemplates(env:DriveEnv,assets:{fetch(r:Request):Promise<Response>}){
+ if(!driveReady(env))return {error:'drive not configured'};
+ const token=await accessToken(env);
+ const pack:any=await (await assets.fetch(new Request('https://assets.local/seed-templates/templates-ornate.json'))).json();
+ const q=encodeURIComponent(`'${env.TEMPLATE_DRIVE_FOLDER_ID}' in parents and trashed=false`);
+ const list:any=await (await drive(env,`/files?q=${q}&fields=files(id,name)&pageSize=200&supportsAllDrives=true&includeItemsFromAllDrives=true`)).json();
+ const byName=new Map<string,string>((list.files||[]).map((f:any)=>[f.name,f.id]));
+ const uploaded:string[]=[];
+ for(const t of pack.templates){
+  if(byName.has(t.file))continue;
+  const r=await assets.fetch(new Request('https://assets.local/seed-templates/'+t.file));
+  if(!r.ok||!(r.headers.get('content-type')||'').includes('png'))throw new Error('missing '+t.file);
+  const boundary='sync_'+crypto.randomUUID();
+  const body=new Blob([`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({name:t.file,mimeType:'image/png',parents:[env.TEMPLATE_DRIVE_FOLDER_ID]})}\r\n--${boundary}\r\nContent-Type: image/png\r\n\r\n`,await r.arrayBuffer(),`\r\n--${boundary}--`]);
+  const up=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'multipart/related; boundary='+boundary},body});
+  if(!up.ok)throw new Error('upload '+t.file+' '+up.status);
+  uploaded.push(t.file);
+ }
+ const cfgId=byName.get('templates.json');
+ if(!cfgId)throw new Error('templates.json not found');
+ const current=JSON.parse((await (await drive(env,`/files/${cfgId}?alt=media&supportsAllDrives=true`)).text()).replace(/^﻿/,''));
+ const merged=[...(current.templates||[]).filter((t:any)=>!pack.templates.some((p:any)=>p.file===t.file)),...pack.templates];
+ const put=await fetch(`https://www.googleapis.com/upload/drive/v3/files/${cfgId}?uploadType=media&supportsAllDrives=true`,{method:'PATCH',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({templates:merged},null,1)});
+ if(!put.ok)throw new Error('update templates.json '+put.status);
+ return {uploaded,templates:merged.length};
+}
