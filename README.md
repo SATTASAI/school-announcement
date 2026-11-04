@@ -28,6 +28,21 @@ npm run build
 
 ใช้ React 19 / Vinext / Cloudflare Workers และ canvas สำหรับจัดหน้า A4 ภาพใช้ proxy แบบอ่านอย่างเดียว จำกัดไปยังเว็บกิจกรรมโรงเรียน ข้อความที่วางถูกส่งลง canvas ตามเดิม ไม่มีการเรียบเรียงใหม่ ข้อความยาวเกินพื้นที่จะรายงานให้ย่อก่อนส่งออก
 
-เว็บไซต์ปัจจุบันใช้ private hosting ของ Sites โดย `.openai/hosting.json` เป็นไฟล์ระบุโปรเจกต์เฉพาะของเว็บไซต์เดิม หากนำไปเผยแพร่ที่อื่นให้ตั้งค่าโฮสต์ของตนเอง รุ่นนี้ไม่ต้องตั้งค่า OPENAI_API_KEY
+## Deploy บน Cloudflare Workers
+
+รีโปใช้ Cloudflare Workers Builds เชื่อมกับสาขา `main`
+
+- Worker name: `school-announcement`
+- Build command: `npm run build`
+- Deploy command: `npm run deploy`
+- Root directory: `/`
+- Node.js: 22.13 ขึ้นไป (แนะนำ 22)
+- Custom domain: `school-announcement.banpadengschool.ac.th`
+
+Cloudflare ต้องมี zone `banpadengschool.ac.th` และสิทธิ์สร้าง Worker/Custom Domain ระบบออกใบรับรอง HTTPS ให้เมื่อโดเมนพร้อมใช้งาน เมื่อเชื่อมรีโปแล้ว push เข้า main จะอัปเดตเว็บอัตโนมัติ
+
+ทดสอบแพ็กเกจก่อน deploy ได้ด้วย `npm run build` และ `npx wrangler deploy --config dist/server/wrangler.json --dry-run` ไม่ต้องใช้ OpenAI API Key และไม่ต้องตั้งค่าฐานข้อมูลหรือ storage
+
+`vite.config.ts` และ `worker/cloudflare.ts` เป็นเส้นทาง build/deploy แบบ standalone โดยไม่เรียก Sites authentication หรือบริการ preview ของ ChatGPT ไฟล์ `.openai/hosting.json` เป็นข้อมูลอ้างอิงโฮสต์เดิมและไม่ถูกใช้โดย Cloudflare build นี้
 
 ไม่ควร commit ไฟล์ .env, ข้อมูล runtime, node_modules หรือไฟล์ภาพต้นฉบับจากผู้ใช้
