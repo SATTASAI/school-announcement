@@ -13,6 +13,7 @@ function flower(g:CanvasRenderingContext2D,x:number,y:number,size:number,color:s
 function curve(g:CanvasRenderingContext2D,y:number,color:string,width:number){g.beginPath();g.moveTo(-70,y);g.bezierCurveTo(300,y-130,840,y+140,1310,y-10);g.lineWidth=width;g.strokeStyle=color;g.stroke();}
 /** Resolution-independent artwork; text and uploaded photos remain separate live layers. */
 export function drawReferenceBackground(g:CanvasRenderingContext2D,t:ReferenceTemplate,school:string,issue=''){
+ if(Number(t.id.slice(-2))>=11){drawSchoolCollection(g,t,school,issue);return;}
  g.fillStyle=t.paper;g.fillRect(0,0,W,H);
  const header=t.id==='reference:04'?310:420;
  const gradient=g.createLinearGradient(0,0,W,header);gradient.addColorStop(0,t.color);gradient.addColorStop(1,t.id==='reference:01'?'#168ec6':t.color);
@@ -67,4 +68,44 @@ export function drawReferenceBackground(g:CanvasRenderingContext2D,t:ReferenceTe
  g.fillStyle=t.color;g.fillRect(0,1610,W,H-1610);g.fillStyle=t.accent;g.fillRect(0,1610,W,5);
  g.fillStyle='#fff';g.font='26px "Noto Sans Thai",sans-serif';g.fillText('งานประชาสัมพันธ์ · '+school,74,1640,870);g.font='21px "Noto Sans Thai",sans-serif';g.fillText('banpadengschool.ac.th',74,1700,870);
  g.textAlign='left';g.textBaseline='top';
+}
+
+/** The second collection uses independent decorative artwork and fixed content frames. */
+function drawSchoolCollection(g:CanvasRenderingContext2D,t:ReferenceTemplate,school:string,issue:string){
+ const index=Number(t.id.slice(-2))-11,l=t.layout;
+ g.fillStyle=t.paper;g.fillRect(0,0,W,H);
+ // Decorative page border and small motifs live in the margins, outside content frames.
+ g.strokeStyle=t.accent;g.globalAlpha=.55;g.lineWidth=3;g.strokeRect(24,24,W-48,H-48);g.globalAlpha=1;
+ g.fillStyle=t.color;g.fillRect(0,0,W,220);
+ path(g,[[0,220],[W,220],[W,238],[0,252]],t.accent);
+ g.save();g.globalAlpha=.22;
+ if(index%3===0){
+  for(let x=-30;x<W;x+=42){path(g,[[x,12],[x+14,26],[x,40],[x-14,26]],t.accent);path(g,[[x,178],[x+14,192],[x,206],[x-14,192]],t.accent);}
+ }else if(index%3===1){
+  for(let x=670;x<W;x+=65){g.strokeStyle=t.accent;g.lineWidth=4;g.beginPath();g.arc(x,100,24,0,Math.PI*2);g.stroke();g.beginPath();g.moveTo(x-28,155);g.lineTo(x+28,155);g.stroke();}
+ }else{
+  for(let x=630;x<W;x+=55){path(g,[[x,0],[x+27,0],[x-83,220],[x-110,220]],t.accent);}
+ }
+ g.restore();
+ g.fillStyle=t.paper;g.beginPath();g.arc(110,112,57,0,Math.PI*2);g.fill();g.strokeStyle=t.accent;g.lineWidth=4;g.stroke();
+ g.fillStyle=t.color;g.textAlign='center';g.textBaseline='middle';g.font='bold 23px "Noto Sans Thai",sans-serif';g.fillText('บ.ป.ด.',110,112);
+ g.textAlign='left';g.textBaseline='top';g.fillStyle='#fff';g.font='bold 32px "Noto Sans Thai",sans-serif';g.fillText('จดหมายข่าวประชาสัมพันธ์',195,49,850);
+ g.font='bold 43px "Noto Sans Thai",sans-serif';g.fillText(school||'โรงเรียนบ้านป่าเด็ง',195,100,850);
+ g.fillStyle=t.accent;g.font='20px "Noto Sans Thai",sans-serif';g.fillText(issue||'ข่าวสารและกิจกรรมโรงเรียน',197,165,750);
+ // Panels follow the actual locked rectangles rather than assuming a common layout.
+ panel(g,{x:l.headline.x-9,y:l.headline.y-10,w:l.headline.w+18,h:l.headline.h+20},t.color,t.accent,index%3===1?4:24);
+ g.save();g.globalAlpha=.45;g.strokeStyle=t.accent;g.lineWidth=2;g.strokeRect(l.body.x-10,l.body.y-10,l.body.w+20,l.body.h+20);g.restore();
+ for(const [i,r] of l.photos.entries()){
+  panel(g,{x:r.x-5,y:r.y-5,w:r.w+10,h:r.h+10},t.accent,t.accent,index%3===1?2:15);
+  panel(g,r,'#e8edf0',t.paper,index%3===1?0:10);
+  g.fillStyle='#8495a0';g.font='24px "Noto Sans Thai",sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText('ภาพกิจกรรม '+(i+1),r.x+r.w/2,r.y+r.h/2);
+ }
+ // Additional themed detailing is kept to the side margins.
+ g.globalAlpha=.55;for(let y=300;y<1540;y+=95){
+  if(t.style==='floral')flower(g,37,y,12,t.accent);
+  else if(t.style==='nature'||t.style==='thai')flourish(g,37,y,11,t.accent);
+  else {g.fillStyle=t.accent;g.beginPath();g.arc(37,y,4,0,Math.PI*2);g.fill();}
+ }g.globalAlpha=1;
+ g.fillStyle=t.color;g.fillRect(0,1610,W,144);g.fillStyle=t.accent;g.fillRect(0,1610,W,5);
+ g.fillStyle='#fff';g.textAlign='left';g.textBaseline='top';g.font='26px "Noto Sans Thai",sans-serif';g.fillText('งานประชาสัมพันธ์ · '+school,74,1640,850);g.font='21px "Noto Sans Thai",sans-serif';g.fillText('banpadengschool.ac.th',74,1700,850);
 }

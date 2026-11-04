@@ -1,3 +1,4 @@
+import {schoolCollection} from './school-collection.ts';
 import type {PageLayout} from './design-layout.ts';
 export type ReferenceTemplate={id:string;name:string;color:string;accent:string;paper:string;tone:string;style:string;photoCount:number;locked:true;layout:PageLayout};
 /** Approved A4 templates. Fixed frames are never reflowed or overridden by draft layouts. */
@@ -694,5 +695,6 @@ export const referenceTemplates:ReferenceTemplate[]=[
       ]
     }
   }
+  ,...schoolCollection
 ];
 export const getReferenceTemplate=(id:string)=>referenceTemplates.find(t=>t.id===id);

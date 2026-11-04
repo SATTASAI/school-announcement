@@ -97,3 +97,7 @@ The template library supports combined name search, tone, photo count, style, ne
 
 Validation: `npm run typecheck`, `npm run build`, `npm test`. New tests cover all ten fixed layouts, non-overlap/bounds, attempted draft/personal-copy overrides, filter intersections and empty results, old templates, photo fitting, and shuffle inclusion.
 
+
+## แม่แบบสร้างสรรค์สำหรับโรงเรียน ชุดที่ 2
+
+เพิ่มแม่แบบล็อกตำแหน่งอีก 10 แบบ (`reference:11`–`reference:20`) ครอบคลุมลายทอป่าเด็ง ห้องเรียน เกียรติยศ ธรรมชาติ วิทยาศาสตร์ ศิลปะ ภาษา กิจกรรม พิธีการ และชุมชน แต่ละแบบกำหนดกรอบหัวข่าว เนื้อหา ผู้อำนวยการ และภาพกิจกรรม 3–6 ภาพแยกกันใน `lib/school-collection.ts` พร้อมลวดลายใน `lib/reference-art.ts` ใช้งานผ่านคลังแม่แบบและการสุ่มเดิมได้ทันที

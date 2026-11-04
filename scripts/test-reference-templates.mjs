@@ -3,10 +3,10 @@ import {referenceTemplates} from '../lib/reference-templates.ts';
 import {getNewsLayout,setPersonalTemplates,templateCapacity,isTemplateLocked,themes} from '../lib/news-render.ts';
 import {filterTemplates,EMPTY_FILTERS,fitTemplatePhotos} from '../lib/template-catalogue.ts';
 import {shuffleTemplate} from '../lib/news-layout.ts';
-assert.equal(referenceTemplates.length,10);
+assert.equal(referenceTemplates.length,20);
 assert.equal(new Set(themes.map(t=>t.id)).size,themes.length);
-assert.equal(themes.length,13);
-assert.deepEqual(referenceTemplates.map(t=>t.photoCount),[6,5,3,5,6,4,6,4,3,5]);
+assert.equal(themes.length,23);
+assert.deepEqual(referenceTemplates.map(t=>t.photoCount),[6,5,3,5,6,4,6,4,3,5,5,6,3,4,6,5,5,6,4,5]);
 for(const t of referenceTemplates){
  assert(isTemplateLocked(t.id));assert.equal(templateCapacity(t.id),t.photoCount);
  for(const count of [1,3,6]){
@@ -25,13 +25,13 @@ for(const t of referenceTemplates){
 }
 setPersonalTemplates([]);
 const items=[...referenceTemplates,{id:'blue',name:'น้ำเงิน · ทางการ'},{id:'drive:test',name:'เขียว',photoCount:5},{id:'local:test',name:'ส่วนตัว',personal:true,photoCount:3}];
-assert.equal(filterTemplates(items,{...EMPTY_FILTERS,category:'reference'},[],{}).length,10);
-assert.equal(filterTemplates(items,{...EMPTY_FILTERS,category:'reference',count:'3'},[],{}).length,2);
-assert.equal(filterTemplates(items,{...EMPTY_FILTERS,category:'reference',tone:'green',count:'4',style:'nature'},[],{})[0].id,'reference:08');
+assert.equal(filterTemplates(items,{...EMPTY_FILTERS,category:'reference'},[],{}).length,20);
+assert.equal(filterTemplates(items,{...EMPTY_FILTERS,category:'reference',count:'3'},[],{}).length,3);
+assert.equal(filterTemplates(items,{...EMPTY_FILTERS,category:'reference',tone:'green',count:'4',style:'nature'},[],{}).some(t=>t.id==='reference:08'),true);
 assert.equal(filterTemplates(items,{...EMPTY_FILTERS,query:'  ชมพู  '},[],{})[0].id,'reference:04');
 assert.equal(filterTemplates(items,{...EMPTY_FILTERS,category:'starred'},['reference:03'],{}).length,1);
 assert.equal(filterTemplates(items,{...EMPTY_FILTERS,category:'personal'},[],{}).length,1);
-assert.equal(filterTemplates(items,{...EMPTY_FILTERS,category:'reference',tone:'red',count:'6'},[],{}).length,0);
+assert.equal(filterTemplates(items,{...EMPTY_FILTERS,category:'reference',tone:'purple',count:'3'},[],{}).length,0);
 assert(filterTemplates(items,{...EMPTY_FILTERS,count:'3'},[],{}).some(t=>t.id==='blue'),'adaptive legacy supports each count');
 assert.equal(filterTemplates(items,EMPTY_FILTERS,[],{'reference:09':99})[0].id,'reference:09');
 assert.deepEqual(fitTemplatePhotos([6,5,4,3,2,1],[1,2,3,4,5,6],3),[6,5,4]);
@@ -41,4 +41,4 @@ assert.deepEqual(fitTemplatePhotos([2],[1,2],6),[2,1]);
 const pool=themes.map(t=>t.id);let current=pool[0],state;const seen=[current];
 for(let i=1;i<pool.length;i++){const n=shuffleTemplate(pool,current,state,()=>.35);current=n.theme;state=n.state;seen.push(current);}
 assert.deepEqual(new Set(seen),new Set(pool));
-console.log('10 locked reference templates: bounds, non-overlap, immutable frames, personal-copy lock, filter intersections, legacy templates, photo fitting and shuffle passed.');
+console.log('20 locked reference templates: bounds, non-overlap, immutable frames, personal-copy lock, filter intersections, legacy templates, photo fitting and shuffle passed.');
