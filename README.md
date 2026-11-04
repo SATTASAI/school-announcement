@@ -1,5 +1,18 @@
 # School Announcement — Padeng PR Studio
 
+## แม่แบบใหม่: ผู้ออกแบบกำหนดตำแหน่ง
+
+แม่แบบใหม่ใช้ภาพพื้นหลังคู่กับไฟล์กำกับ `<ชื่อภาพ>.template.json` ในโฟลเดอร์แม่แบบเดียวกัน เช่น `school-news.png` และ `school-news.png.template.json` ระบบอ่านพิกัดจากไฟล์กำกับโดยตรง ไม่ตรวจจับกรอบจากภาพและไม่จัดตำแหน่งใหม่ แม่แบบเดิมใน `templates.json` ยังคงใช้ได้ หากภาพเดียวกันมีทั้งสองรายการ ไฟล์กำกับมีลำดับความสำคัญสูงกว่า
+
+1. ออกแบบภาพพื้นหลังแนวตั้งขนาด 1240 × 1754 พิกเซล โดยเว้นพื้นที่สำหรับข้อความ ภาพกิจกรรม และรูป ผอ.
+2. คัดลอก `scripts/template-manifest.example.json` ไปอยู่ข้างไฟล์ภาพ แล้วแก้ `file`, `name` และ `layout` ให้ตรงกับงานออกแบบ กำหนดกรอบภาพ 1–6 กรอบ เรียงลำดับตามภาพที่ต้องการ
+3. เรียก `node --experimental-strip-types scripts/prepare-template.mjs /path/definition.json` เพื่อสร้างไฟล์กำกับ ระบบตรวจขอบเขต ฟอนต์ สี และฟิลด์ที่จำเป็นโดยไม่เปลี่ยนพิกัด และจะไม่เขียนทับไฟล์กำกับเดิม
+4. อัปโหลดภาพและไฟล์กำกับที่สร้างแล้วไปยังโฟลเดอร์แม่แบบ Google Drive จากนั้นกด **โหลดแม่แบบใหม่** ในระบบ
+
+ไฟล์กำกับรุ่น 1 ระบุ `canvas` เท่ากับ 1240 × 1754 เสมอ `layout` มี `headline`, `body`, `director`, `photos` โดยทุกกรอบใช้ `x`, `y`, `w`, `h` เป็นพิกเซลจากมุมซ้ายบน กรอบข้อความเพิ่ม `size`, `color` แบบ `#RRGGBB`, `align` (`left`, `center`, `right`) และ `font` (`Noto Sans Thai`, `Noto Serif Thai`) ตำแหน่งและขนาดกรอบถูกล็อก แต่ข้อความและการครอปภาพยังแก้ได้
+
+หากไฟล์กำกับผิดรูปแบบ ชื่อภาพไม่ตรง มีไฟล์ซ้ำ หรือกรอบอยู่นอกหน้า ระบบจะไม่แสดงแม่แบบนั้นและจะแจ้งข้อผิดพลาดในหน้าแม่แบบ แก้ไฟล์กำกับแล้วโหลดใหม่ได้ โดยแม่แบบอื่นยังใช้งานได้ตามปกติ
+
 เว็บจัดใบข่าวประชาสัมพันธ์โรงเรียนบ้านป่าเด็ง
 
 1. กดสร้างข่าวและเลือกอัลบั้มจาก activity.banpadengschool.ac.th
@@ -83,3 +96,4 @@ The built-in catalogue includes ten additional A4 portrait templates (`reference
 The template library supports combined name search, tone, photo count, style, new collection, favorites and personal-template filters, with result counts, empty results and reset. Photo-count filtering includes adaptive legacy templates for every count they support. Drive metadata without a tone/style uses conservative name inference. Optional issue/date text and a real HTTP(S) QR link can be entered for fixed templates; no example date, fake code or sample portrait is published. The initials badge is a neutral school placeholder rather than an official school seal.
 
 Validation: `npm run typecheck`, `npm run build`, `npm test`. New tests cover all ten fixed layouts, non-overlap/bounds, attempted draft/personal-copy overrides, filter intersections and empty results, old templates, photo fitting, and shuffle inclusion.
+
