@@ -61,16 +61,28 @@ function drawText(g:CanvasRenderingContext2D,value:string,s:TextSlot,bold=false,
  wrapped.forEach((line,i)=>g.fillText(line,x,y+i*size*1.5));g.textAlign='left';
 }
 async function drawDirector(g:CanvasRenderingContext2D,r:Rect,profile?:DirectorProfile){
- g.save();rounded(g,r,16);g.fillStyle='#fffdf7';g.fill();g.strokeStyle='#c2a364';g.lineWidth=2.5;g.stroke();
- const imageRect={x:r.x+7,y:r.y+7,w:r.w-14,h:r.h*.72};
+ g.save();rounded(g,r,16);g.fillStyle='#fffdf8';g.fill();g.strokeStyle='#d4b879';g.lineWidth=3;g.stroke();
+ const inset=Math.max(5,Math.min(9,r.w*.055));
+ const imageRect={x:r.x+inset,y:r.y+inset,w:r.w-2*inset,h:r.h*.62};
  g.save();rounded(g,imageRect,10);g.clip();
  if(profile?.image)cover(g,await loadImage(profile.image,'โหลดรูป ผอ. ไม่สำเร็จ'),imageRect);
  else{g.fillStyle='#e8edf1';g.fillRect(imageRect.x,imageRect.y,imageRect.w,imageRect.h);g.fillStyle='#718193';g.font=`bold ${Math.min(31,r.w*.24)}px "Noto Sans Thai",sans-serif`;g.textAlign='center';g.textBaseline='middle';g.fillText('ผอ.',r.x+r.w/2,imageRect.y+imageRect.h/2);}
- g.restore();g.fillStyle='#4c514e';g.textAlign='center';g.textBaseline='middle';
- const label=profile?.name?.trim()||'ผู้อำนวยการ';let size=Math.min(15,r.w*.115);
- while(size>8){g.font=`${size}px "Noto Sans Thai",sans-serif`;if(g.measureText(label).width<=r.w-12)break;size--;}
- g.fillText(label,r.x+r.w/2,r.y+r.h*.84);
- if(profile?.name){g.font=`${Math.min(11,r.w*.08)}px "Noto Sans Thai",sans-serif`;g.fillStyle='#8a8b80';g.fillText(profile.title||'ผู้อำนวยการโรงเรียน',r.x+r.w/2,r.y+r.h*.94,r.w-10);}
+ g.restore();
+ // Fit both lines inside the card, including long Thai names and titles.
+ const width=r.w-2*inset, center=r.x+r.w/2, label=profile?.name?.trim()||'ผู้อำนวยการ';
+ const title=profile?.name?.trim()?(profile.title?.trim()||'ผู้อำนวยการโรงเรียน'):'';
+ const textTop=imageRect.y+imageRect.h+inset*.55, textBottom=r.y+r.h-inset*.55;
+ const available=Math.max(0,textBottom-textTop), maxNameLines=title?2:2;
+ let size=Math.min(20,r.w*.11,available/(title?3.2:2));let wrapped:string[]=[];
+ for(;size>8;size-=.5){g.font=`bold ${size}px "Noto Sans Thai",sans-serif`;wrapped=lines(g,label,width);if(wrapped.length<=maxNameLines)break;}
+ g.font=`bold ${size}px "Noto Sans Thai",sans-serif`;
+ if(wrapped.length>maxNameLines){wrapped=wrapped.slice(0,maxNameLines);let last=wrapped[maxNameLines-1];const seg=Array.from(new Intl.Segmenter('th',{granularity:'grapheme'}).segment(last),x=>x.segment);while(seg.length&&g.measureText(seg.join('')+'…').width>width)seg.pop();wrapped[maxNameLines-1]=seg.join('')+'…';}
+ const leading=size*1.18, titleSize=title?Math.min(size*.82,r.w*.082,available*.22):0;
+ const total=wrapped.length*leading+(title?titleSize*1.25+2:0), y=textTop+Math.max(0,(available-total)/2);
+ g.save();g.beginPath();g.rect(r.x+inset,textTop,width,available);g.clip();g.textAlign='center';g.textBaseline='top';g.fillStyle='#253445';
+ wrapped.forEach((line,i)=>g.fillText(line,center,y+i*leading,width));
+ if(title){g.fillStyle='#6c7480';g.font=`${titleSize}px "Noto Sans Thai",sans-serif`;g.fillText(title,center,y+wrapped.length*leading+2,width);}
+ g.restore();
  g.restore();
 }
 export async function renderNews(n:any,school:string,director?:DirectorProfile){
@@ -106,3 +118,4 @@ export async function png(n:any,school:string,director?:DirectorProfile){const c
 
 export function download(blob:Blob,name:string){const a=document.createElement('a');const u=URL.createObjectURL(blob);a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),10000);}
 export function zipStore(files:{name:string,data:Uint8Array}[]){const parts:Uint8Array[]=[];const central:Uint8Array[]=[];let offset=0;const enc=new TextEncoder();const record=(len:number)=>new Uint8Array(len);const crc=(b:Uint8Array)=>{let c=0xffffffff;for(const v of b){c^=v;for(let i=0;i<8;i++)c=c&1?0xedb88320^(c>>>1):c>>>1;}return(c^0xffffffff)>>>0;};for(const f of files){const name=enc.encode(f.name);const sum=crc(f.data);const h=record(30+name.length);const v=new DataView(h.buffer);v.setUint32(0,0x04034b50,true);v.setUint16(4,20,true);v.setUint16(6,0x800,true);v.setUint32(14,sum,true);v.setUint32(18,f.data.length,true);v.setUint32(22,f.data.length,true);v.setUint16(26,name.length,true);h.set(name,30);parts.push(h,f.data);const ce=record(46+name.length);const d=new DataView(ce.buffer);d.setUint32(0,0x02014b50,true);d.setUint16(4,20,true);d.setUint16(6,20,true);d.setUint16(8,0x800,true);d.setUint32(16,sum,true);d.setUint32(20,f.data.length,true);d.setUint32(24,f.data.length,true);d.setUint16(28,name.length,true);d.setUint32(42,offset,true);ce.set(name,46);central.push(ce);offset+=h.length+f.data.length;}const end=record(22);const e=new DataView(end.buffer);e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,central.reduce((a,b)=>a+b.length,0),true);e.setUint32(16,offset,true);return new Blob([...parts,...central,end] as BlobPart[],{type:'application/zip'});}
+
