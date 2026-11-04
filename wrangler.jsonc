@@ -3,6 +3,7 @@
  "name": "school-announcement",
  "main": "worker/index.ts",
  "compatibility_date": "2026-05-15",
+ "build": {"command": "npm run build"},
  "workers_dev": true,
  "preview_urls": false,
  "assets": {
