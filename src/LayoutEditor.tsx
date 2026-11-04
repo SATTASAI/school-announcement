@@ -9,13 +9,13 @@ function withBox(layout:PageLayout,key:Part,value:Rect):PageLayout{
  if(key.startsWith('photo:'))return {...layout,photos:layout.photos.map((r,i)=>i===Number(key.split(':')[1])?value:r)};
  return {...layout,[key]:{...layout[key as 'headline'|'body'|'director'],...value}};
 }
-export default function LayoutEditor({news,school,director,onClose,onApply,onSave}:{news:EditableNews;school:string;director:DirectorProfile;onClose:()=>void;onApply:(layout:PageLayout,crop:Record<string,Crop>)=>void;onSave:(layout:PageLayout,name:string)=>void}){
+export default function LayoutEditor({news,school,director,logo,onClose,onApply,onSave}:{news:EditableNews;school:string;director:DirectorProfile;logo:string;onClose:()=>void;onApply:(layout:PageLayout,crop:Record<string,Crop>)=>void;onSave:(layout:PageLayout,name:string)=>void}){
  const locked=isTemplateLocked(news.theme);
  const [layout,setLayout]=useState<PageLayout>(()=>getNewsLayout(news)),[crops,setCrops]=useState<Record<string,Crop>>(news.crop||{}),[part,setPart]=useState<Part>('headline'),[mode,setMode]=useState<'move'|'crop'>('move');
  const [src,setSrc]=useState(''),[error,setError]=useState(''),[name,setName]=useState(''),[rendering,setRendering]=useState(false);
  const sheet=useRef<HTMLDivElement>(null);
  const drag=useRef<{part:Part;x:number;y:number;rect:Rect;mode:'move'|'resize'|'crop';crop:Crop;id:number}|null>(null);
- useEffect(()=>{let cancelled=false,url='';setRendering(true);const timer=setTimeout(async()=>{try{const blob=await png({...news,layout,crop:crops},school,director);if(cancelled)return;url=URL.createObjectURL(blob);setSrc(url);setError('');}catch(e){if(!cancelled)setError((e as Error).message);}finally{if(!cancelled)setRendering(false);}},180);return()=>{cancelled=true;clearTimeout(timer);if(url)URL.revokeObjectURL(url);};},[layout,crops,news,school,director]);
+ useEffect(()=>{let cancelled=false,url='';setRendering(true);const timer=setTimeout(async()=>{try{const blob=await png({...news,layout,crop:crops},school,director,logo);if(cancelled)return;url=URL.createObjectURL(blob);setSrc(url);setError('');}catch(e){if(!cancelled)setError((e as Error).message);}finally{if(!cancelled)setRendering(false);}},180);return()=>{cancelled=true;clearTimeout(timer);if(url)URL.revokeObjectURL(url);};},[layout,crops,news,school,director,logo]);
  const current=box(layout,part),textPart=part==='headline'||part==='body',selectedText=textPart?layout[part as 'headline'|'body']:null;
  const photoIndex=part.startsWith('photo:')?Number(part.split(':')[1]):-1,photoId=news.selected[photoIndex],crop=safeCrop(crops[photoId]);
  const updateRect=(key:Part,changes:Partial<Rect>)=>!locked&&setLayout(l=>withBox(l,key,safeRect({...box(l,key),...changes},box(l,key))));

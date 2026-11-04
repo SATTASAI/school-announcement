@@ -20,6 +20,12 @@ export const isTemplateLocked=(id:string)=>!!getReferenceTemplate(templateSource
 export const templateCapacity=(id:string)=>getReferenceTemplate(templateSource(id))?.photoCount||templateData(id)?.fixedLayout?.photos.length;
 export function templateSource(id:string){return personalTemplates.find(t=>t.id===id)?.sourceTheme||id;}
 function templateData(id:string){const source=templateSource(id);return driveTemplates.find(t=>t.id===source);}
+export function templateLogoFrame(id:string):Rect|undefined{
+ const source=templateSource(id),reference=getReferenceTemplate(source);
+ if(reference)return Number(source.slice(-2))>=11?{x:53,y:55,w:114,h:114}:{x:62,y:67,w:140,h:140};
+ const drive=templateData(id);if(drive)return drive.fixedLayout?.logo;
+ return {x:65,y:40,w:145,h:145};
+}
 export function getNewsLayout(n:{theme:string;selected:number[];layout?:PageLayout}):PageLayout{
  const t=templateData(n.theme),source=templateSource(n.theme);
  const fixed=getReferenceTemplate(source);if(fixed)return structuredClone({...fixed.layout,headline:{...fixed.layout.headline,color:fixed.id==='reference:04'?fixed.color:'#ffffff'}});
@@ -86,7 +92,7 @@ async function drawDirector(g:CanvasRenderingContext2D,r:Rect,profile?:DirectorP
  g.restore();
  g.restore();
 }
-export async function renderNews(n:any,school:string,director?:DirectorProfile){
+export async function renderNews(n:any,school:string,director?:DirectorProfile,logo?:string){
  await document.fonts.ready;
  const canvas=document.createElement('canvas');canvas.width=1240;canvas.height=1754;const g=canvas.getContext('2d')!;
  const source=templateSource(n.theme),t=templateData(n.theme),reference=getReferenceTemplate(source);
@@ -97,8 +103,15 @@ export async function renderNews(n:any,school:string,director?:DirectorProfile){
  else{
   const theme=themes.find(t=>t.id===source)||themes[0];
   g.fillStyle=source==='forest'?'#f7f7ef':'#fff';g.fillRect(0,0,1240,1754);g.fillStyle=theme.color;g.fillRect(0,0,1240,225);g.fillStyle=theme.accent;g.fillRect(0,225,1240,8);
-  g.fillStyle='#fff';g.font='bold 44px "Noto Sans Thai",sans-serif';g.fillText(school||'โรงเรียนบ้านป่าเด็ง',65,88,900);g.font='24px "Noto Sans Thai",sans-serif';g.fillText('จดหมายข่าวประชาสัมพันธ์ / SCHOOL NEWS',65,145);g.fillStyle=theme.accent;g.font='20px sans-serif';g.fillText('BAN PA DENG SCHOOL',65,190);
+  const headerX=logo?235:65;g.fillStyle='#fff';g.font='bold 44px "Noto Sans Thai",sans-serif';g.fillText(school||'โรงเรียนบ้านป่าเด็ง',headerX,88,logo?730:900);g.font='24px "Noto Sans Thai",sans-serif';g.fillText('จดหมายข่าวประชาสัมพันธ์ / SCHOOL NEWS',headerX,145);g.fillStyle=theme.accent;g.font='20px sans-serif';g.fillText('BAN PA DENG SCHOOL',headerX,190);
   g.fillStyle=theme.color;g.fillRect(0,1680,1240,74);g.fillStyle='#fff';g.font='20px "Noto Sans Thai",sans-serif';g.fillText('งานประชาสัมพันธ์ · '+school,65,1727);
+ }
+ const logoFrame=templateLogoFrame(n.theme);
+ if(logo&&logoFrame){
+  const im=await loadImage(logo,'โหลดตราโรงเรียนไม่สำเร็จ');
+  if(reference){g.save();g.fillStyle=reference.paper;g.beginPath();g.ellipse(logoFrame.x+logoFrame.w/2,logoFrame.y+logoFrame.h/2,logoFrame.w/2-3,logoFrame.h/2-3,0,0,Math.PI*2);g.fill();g.restore();}
+  const pad=reference?8:0,scale=Math.min((logoFrame.w-2*pad)/im.naturalWidth,(logoFrame.h-2*pad)/im.naturalHeight),w=im.naturalWidth*scale,h=im.naturalHeight*scale;
+  g.drawImage(im,logoFrame.x+(logoFrame.w-w)/2,logoFrame.y+(logoFrame.h-h)/2,w,h);
  }
  const layout=getNewsLayout(n);
  const selected:number[]=(n.selected||[]).slice(0,6);
@@ -116,7 +129,7 @@ export async function renderNews(n:any,school:string,director?:DirectorProfile){
  }
  return canvas;
 }
-export async function png(n:any,school:string,director?:DirectorProfile){const c=await renderNews(n,school,director);return await new Promise<Blob>((resolve,reject)=>c.toBlob(b=>b?resolve(b):reject(Error('สร้างไฟล์ไม่สำเร็จ')),'image/png'));}
+export async function png(n:any,school:string,director?:DirectorProfile,logo?:string){const c=await renderNews(n,school,director,logo);return await new Promise<Blob>((resolve,reject)=>c.toBlob(b=>b?resolve(b):reject(Error('สร้างไฟล์ไม่สำเร็จ')),'image/png'));}
 
 export function download(blob:Blob,name:string){const a=document.createElement('a');const u=URL.createObjectURL(blob);a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),10000);}
 export function zipStore(files:{name:string,data:Uint8Array}[]){const parts:Uint8Array[]=[];const central:Uint8Array[]=[];let offset=0;const enc=new TextEncoder();const record=(len:number)=>new Uint8Array(len);const crc=(b:Uint8Array)=>{let c=0xffffffff;for(const v of b){c^=v;for(let i=0;i<8;i++)c=c&1?0xedb88320^(c>>>1):c>>>1;}return(c^0xffffffff)>>>0;};for(const f of files){const name=enc.encode(f.name);const sum=crc(f.data);const h=record(30+name.length);const v=new DataView(h.buffer);v.setUint32(0,0x04034b50,true);v.setUint16(4,20,true);v.setUint16(6,0x800,true);v.setUint32(14,sum,true);v.setUint32(18,f.data.length,true);v.setUint32(22,f.data.length,true);v.setUint16(26,name.length,true);h.set(name,30);parts.push(h,f.data);const ce=record(46+name.length);const d=new DataView(ce.buffer);d.setUint32(0,0x02014b50,true);d.setUint16(4,20,true);d.setUint16(6,20,true);d.setUint16(8,0x800,true);d.setUint32(16,sum,true);d.setUint32(20,f.data.length,true);d.setUint32(24,f.data.length,true);d.setUint16(28,name.length,true);d.setUint32(42,offset,true);ce.set(name,46);central.push(ce);offset+=h.length+f.data.length;}const end=record(22);const e=new DataView(end.buffer);e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,central.reduce((a,b)=>a+b.length,0),true);e.setUint32(16,offset,true);return new Blob([...parts,...central,end] as BlobPart[],{type:'application/zip'});}

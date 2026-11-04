@@ -66,7 +66,7 @@ export function buildTemplates(files:{id:string;name:string;mimeType:string}[],c
   if(!f||used.has(f.id))continue;used.add(f.id);
   const frames=t?.fixedLayout?.photos;const fixed=!!t.locked&&Array.isArray(frames)&&frames.length>=3&&frames.length<=6;
   const defaultText={x:65,y:300,w:1110,h:150,size:40,color:'#143d73',align:'left' as const,font:'Noto Sans Thai' as const};
-  const fixedLayout:PageLayout|undefined=fixed?{headline:safeText(t.fixedLayout.headline,defaultText),body:safeText(t.fixedLayout.body,{...defaultText,y:1140,h:400,size:28}),director:safeRect(t.fixedLayout.director,DEFAULT_DIRECTOR),photos:frames.map((r:any)=>safeRect(r,{x:65,y:450,w:400,h:300}))}:undefined;
+  const fixedLayout:PageLayout|undefined=fixed?{...(t.fixedLayout.logo?{logo:safeRect(t.fixedLayout.logo,{x:60,y:40,w:140,h:140})}:{}),headline:safeText(t.fixedLayout.headline,defaultText),body:safeText(t.fixedLayout.body,{...defaultText,y:1140,h:400,size:28}),director:safeRect(t.fixedLayout.director,DEFAULT_DIRECTOR),photos:frames.map((r:any)=>safeRect(r,{x:65,y:450,w:400,h:300}))}:undefined;
   out.push({id:'drive:'+f.id,fileId:f.id,fromConfig:true,name:String(t.name||f.name).slice(0,60),headline:box(t.headline,DEFAULT_SLOTS.headline),photos:{...box(t.photos,DEFAULT_SLOTS.photos),...(PHOTO_PATTERNS.includes(t.photos?.pattern)?{pattern:t.photos.pattern}: {})},body:box(t.body,DEFAULT_SLOTS.body),director:safeRect(t.director,DEFAULT_DIRECTOR),photoCount:fixedLayout?fixedLayout.photos.length:Math.round(num(t.photoCount,3,6,4)),...(fixedLayout?{locked:true,fixedLayout}: {})});
  }
  for(const f of images)if(!used.has(f.id))out.push({id:'drive:'+f.id,fileId:f.id,name:f.name.replace(/\.[^.]+$/,'').slice(0,60),...structuredClone(DEFAULT_SLOTS)});

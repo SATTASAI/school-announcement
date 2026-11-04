@@ -25,5 +25,5 @@ export function validateManifest(raw:unknown,expectedFile?:string):TemplateManif
   return {...r,size:v.size,color:v.color,align:v.align,font:v.font};
  };
  if(!m.layout||!Array.isArray(m.layout.photos)||m.layout.photos.length<1||m.layout.photos.length>6)return fail('ต้องมีกรอบภาพกิจกรรม 1–6 กรอบ');
- return {schemaVersion:1,file:m.file,name:m.name.trim(),canvas:{width:1240,height:1754},layout:{headline:text(m.layout.headline,'พาดหัว'),body:text(m.layout.body,'เนื้อข่าว'),director:rect(m.layout.director,'ผอ.'),photos:m.layout.photos.map((v:any,i:number)=>rect(v,'ภาพ '+(i+1)))}};
+ return {schemaVersion:1,file:m.file,name:m.name.trim(),canvas:{width:1240,height:1754},layout:{...(m.layout.logo!==undefined?{logo:rect(m.layout.logo,'ตราโรงเรียน')}:{}),headline:text(m.layout.headline,'พาดหัว'),body:text(m.layout.body,'เนื้อข่าว'),director:rect(m.layout.director,'ผอ.'),photos:m.layout.photos.map((v:any,i:number)=>rect(v,'ภาพ '+(i+1)))}};
 }
