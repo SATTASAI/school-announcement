@@ -3,21 +3,25 @@
   "version": "0.2.0",
   "private": true,
   "type": "module",
-  "engines": {"node": ">=22.13.0"},
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "scripts": {
     "dev": "vite",
     "dev:worker": "wrangler dev",
     "build": "vite build",
     "typecheck": "tsc",
     "deploy": "wrangler deploy",
-    "test": "node --experimental-strip-types scripts/test-news-layout.mjs"
+    "test": "node --experimental-strip-types scripts/test-news-layout.mjs && node --experimental-strip-types scripts/test-reference-templates.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.31.0",
+    "qrcode": "^1.5.4",
     "react": "19.2.6",
     "react-dom": "19.2.6"
   },
   "devDependencies": {
+    "@types/qrcode": "^1.5.6",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.2",

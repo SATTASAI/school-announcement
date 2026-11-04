@@ -72,3 +72,14 @@ npx wrangler dev   # เปิดเว็บพร้อม Worker ที่ ht
 - `lib/design-layout.ts` เป็น geometry และ validation กลาง ใช้ร่วมกันระหว่าง editor, thumbnail และ renderer
 - metadata Drive เพิ่ม `photoCount` (3–6), `photos.pattern` (hero/grid/mosaic/portrait-pair/ribbon/stair/feature-right/columns/magazine/tiles), `director` (x,y,w,h) โดย config เดิมยังใช้งานได้
 - การตั้งค่า ดาว อันดับ และแม่แบบส่วนตัวใช้ localStorage บนอุปกรณ์นี้ ไม่มีการส่งรูป ผอ. ขึ้นเซิร์ฟเวอร์
+
+
+## Approved reference templates and catalogue filters
+
+The built-in catalogue includes ten additional A4 portrait templates (`reference:01`–`reference:10`) in the approved blue/cyan, green/gold, blue/gold, pink/cream floral, Thai gold, mosaic, violet/silver, forest/Karen-inspired, burgundy/gold and editorial styles. The original built-ins, Drive templates, favorites and usage counts remain available. The new templates have fixed capacities of 6, 5, 3, 5, 6, 4, 6, 4, 3 and 5 photos respectively.
+
+`lib/reference-templates.ts` is the canonical 1240 × 1754 coordinate specification. `lib/reference-art.ts` draws the decorative artwork separately from live text and uploaded activity/director images. Draft or personal layout overrides cannot move or resize the new fixed frames. The editor permits photo cropping and zoom within those frames. Switching or shuffling templates preserves selected photos first and fills remaining frames from the album; exports require the fixed photo count. Existing adaptive templates retain their layout editing behavior.
+
+The template library supports combined name search, tone, photo count, style, new collection, favorites and personal-template filters, with result counts, empty results and reset. Photo-count filtering includes adaptive legacy templates for every count they support. Drive metadata without a tone/style uses conservative name inference. Optional issue/date text and a real HTTP(S) QR link can be entered for fixed templates; no example date, fake code or sample portrait is published. The initials badge is a neutral school placeholder rather than an official school seal.
+
+Validation: `npm run typecheck`, `npm run build`, `npm test`. New tests cover all ten fixed layouts, non-overlap/bounds, attempted draft/personal-copy overrides, filter intersections and empty results, old templates, photo fitting, and shuffle inclusion.

@@ -1,16 +1,18 @@
 import {useState,useEffect} from 'react';
 import {Plus,Trash2,Images,Download,Check,ArrowRight,LayoutTemplate,Newspaper,Settings2,Loader2,X,RefreshCw,FolderOpen,ChevronRight,Star,SlidersHorizontal,Upload} from 'lucide-react';
-import {themes,png,download,zipStore,setDriveTemplates,setPersonalTemplates,templateSource} from '../lib/news-render';
+import {themes,png,download,zipStore,setDriveTemplates,setPersonalTemplates,templateSource,templateCapacity,isTemplateLocked} from '../lib/news-render';
 import type {DriveTemplate} from '../lib/news-render';
 import {pickPhotos,pickTheme,shuffleTemplate} from '../lib/news-layout';
 import type {ActivityPhoto,TemplateShuffleState} from '../lib/news-layout';
 import type {PageLayout,Crop,DirectorProfile} from '../lib/design-layout';
 import LayoutEditor from './LayoutEditor';
+import {fitTemplatePhotos} from '../lib/template-catalogue';
+import {getReferenceTemplate} from '../lib/reference-templates';
 import TemplateLibrary from './TemplateLibrary';
 import type {CatalogueItem} from './TemplateLibrary';
 import {useStudioPreferences,portraitData} from './studio-preferences';
 
-type News={id:string;album:any;photos:ActivityPhoto[];selected:number[];theme:string;headline:string;body:string;date:string;templateShuffle?:TemplateShuffleState;layout?:PageLayout;crop?:Record<string,Crop>};
+type News={id:string;album:any;photos:ActivityPhoto[];selected:number[];theme:string;headline:string;body:string;date:string;sourceUrl?:string;templateShuffle?:TemplateShuffleState;layout?:PageLayout;crop?:Record<string,Crop>};
 const STORAGE='padeng-pr-layout-v2';
 async function api(url:string){const r=await fetch(url);const data:any=await r.json();if(!r.ok)throw Error(data.error||'เชื่อมต่อไม่สำเร็จ');return data;}
 function Preview({news,school,director,ready,onOpen}:{news:News;school:string;director:DirectorProfile;ready:boolean;onOpen:()=>void}){
@@ -32,17 +34,17 @@ export default function Page(){
  setPersonalTemplates(prefs.personal);
  const [cardViews,setCardViews]=useState<Record<string,'edit'|'preview'>>({});
  const [driveList,setDriveList]=useState<DriveTemplate[]>([]),[driveError,setDriveError]=useState(''),[driveLoading,setDriveLoading]=useState(true);
- const catalogue:CatalogueItem[]=[...themes.map(t=>({id:t.id,name:t.name})),...driveList.map(t=>({...t})),...prefs.personal.map(t=>({id:t.id,name:t.name,personal:true,photoCount:t.layout.photos.length,fileId:driveList.find(d=>d.id===t.sourceTheme)?.fileId}))];
+ const catalogue:CatalogueItem[]=[...themes.map(t=>({...t})),...driveList.map(t=>({...t})),...prefs.personal.map(t=>({...getReferenceTemplate(t.sourceTheme),id:t.id,name:t.name,personal:true,photoCount:t.layout.photos.length,fileId:driveList.find(d=>d.id===t.sourceTheme)?.fileId}))];
  const allThemes=catalogue.map(t=>({id:t.id,name:t.name}));
  const editorNews=news.find(n=>n.id===editorId);
- const useTheme=(id:string)=>{setNews(items=>items.map(n=>({...n,theme:id,layout:undefined,templateShuffle:undefined})));setTab('news');setNotice('ใช้แม่แบบกับข่าวทั้งชุดแล้ว');};
+ const useTheme=(id:string)=>{setNews(items=>items.map(n=>({...n,theme:id,selected:fitTemplatePhotos(n.selected,pickPhotos(n.photos,n.album?.cover_id),templateCapacity(id)),layout:undefined,templateShuffle:undefined})));setTab('news');setNotice('ใช้แม่แบบกับข่าวทั้งชุดแล้ว');};
  const deletePersonal=(id:string)=>{const t=prefs.personal.find(t=>t.id===id);if(!t)return;setNews(items=>items.map(n=>n.theme===id?{...n,theme:t.sourceTheme,layout:n.layout||t.layout}:n));setPrefs(p=>({...p,personal:p.personal.filter(t=>t.id!==id),favorites:p.favorites.filter(x=>x!==id)}));};
  const themeName=(id:string)=>allThemes.find(t=>t.id===id)?.name||(id.startsWith('drive:')?'แม่แบบจาก Drive':'');
  const loadDrive=async(refresh=false)=>{setDriveLoading(true);try{const r=await fetch('/api/pr/templates'+(refresh?'?refresh=1':''));const d:any=await r.json();if(!r.ok||d.error)throw Error(d.error||'โหลดแม่แบบจาก Google Drive ไม่สำเร็จ');setDriveTemplates(d.templates||[]);setDriveList(d.templates||[]);setDriveError('');}catch(e){setDriveError((e as Error).message||'โหลดแม่แบบจาก Google Drive ไม่สำเร็จ');}finally{setDriveLoading(false);}};
  useEffect(()=>{loadDrive();},[]);
  useEffect(()=>{try{
   const saved=JSON.parse(localStorage.getItem(STORAGE)||localStorage.getItem('padeng-pr-v1')||'null');
-  if(Array.isArray(saved?.news))setNews(saved.news.filter((n:any)=>n.album&&Array.isArray(n.photos)&&n.selected?.length).slice(0,5).map((n:any)=>({id:n.id||crypto.randomUUID(),album:n.album,photos:n.photos,selected:n.selected.slice(0,6),theme:themes.some(t=>t.id===n.theme)||String(n.theme).startsWith('drive:')||String(n.theme).startsWith('local:')?n.theme:'blue',headline:n.headline||'',body:n.body||'',date:'',templateShuffle:n.templateShuffle,layout:n.layout,crop:n.crop})));
+  if(Array.isArray(saved?.news))setNews(saved.news.filter((n:any)=>n.album&&Array.isArray(n.photos)&&n.selected?.length).slice(0,5).map((n:any)=>({id:n.id||crypto.randomUUID(),album:n.album,photos:n.photos,selected:n.selected.slice(0,6),theme:themes.some(t=>t.id===n.theme)||String(n.theme).startsWith('drive:')||String(n.theme).startsWith('local:')?n.theme:'blue',headline:n.headline||'',body:n.body||'',date:n.date||'',sourceUrl:n.sourceUrl||'',templateShuffle:n.templateShuffle,layout:n.layout,crop:n.crop})));
   if(saved?.school)setSchool(saved.school);
  }catch{setNotice('อ่านฉบับร่างเดิมไม่สำเร็จ สามารถเริ่มข่าวใหม่ได้');}setReady(true);},[]);
  useEffect(()=>{if(ready)try{localStorage.setItem(STORAGE,JSON.stringify({news,school}));}catch{setNotice('พื้นที่บันทึกบนเครื่องเต็ม กรุณาดาวน์โหลดงาน');}},[news,school,ready]);
@@ -62,9 +64,9 @@ export default function Page(){
    setPicker(null);setTab('news');setNotice('เลือกภาพและแม่แบบให้แล้ว วางพาดหัวกับเนื้อข่าวได้เลย');
   }catch(e){setAlbumError((e as Error).message);}finally{setLoading(false);}
  };
- const shuffleNewsTemplate=(id:string)=>{if(busy||driveLoading)return;const ids=allThemes.map(t=>t.id);setNews(items=>items.map(n=>{if(n.id!==id)return n;const next=shuffleTemplate(ids,n.theme,n.templateShuffle);return {...n,theme:next.theme,layout:undefined,templateShuffle:next.state};}));setNotice('สุ่มแม่แบบแล้ว · ไม่ซ้ำจนกว่าจะครบทุกแบบในรอบนี้');};
- const valid=(n:News)=>{if(!n.headline.trim()||!n.body.trim())throw Error('วางพาดหัวและเนื้อข่าวก่อนดาวน์โหลด');if(!n.selected.length)throw Error('เลือกภาพอย่างน้อย 1 ภาพ');};
- const openPreview=async(n:News)=>{if(busy)return;setBusy(true);setNotice('กำลังเตรียมใบข่าว…');try{setPreview(URL.createObjectURL(await png(n,school,prefs.director)));setPreviewTheme(n.theme);setNotice('');}catch(e){setNotice((e as Error).message);}finally{setBusy(false);}};
+ const shuffleNewsTemplate=(id:string)=>{if(busy||driveLoading)return;const ids=allThemes.map(t=>t.id);setNews(items=>items.map(n=>{if(n.id!==id)return n;const next=shuffleTemplate(ids,n.theme,n.templateShuffle);return {...n,theme:next.theme,selected:fitTemplatePhotos(n.selected,pickPhotos(n.photos,n.album?.cover_id),templateCapacity(next.theme)),layout:undefined,templateShuffle:next.state};}));setNotice('สุ่มแม่แบบแล้ว · ไม่ซ้ำจนกว่าจะครบทุกแบบในรอบนี้');};
+ const valid=(n:News)=>{if(!n.headline.trim()||!n.body.trim())throw Error('วางพาดหัวและเนื้อข่าวก่อนดาวน์โหลด');if(!n.selected.length)throw Error('เลือกภาพอย่างน้อย 1 ภาพ');const count=templateCapacity(n.theme);if(count&&n.selected.length!==count)throw Error('แม่แบบนี้ต้องใช้ '+count+' ภาพ กรุณาเพิ่มภาพหรือเลือกแม่แบบอื่น');};
+ const openPreview=async(n:News)=>{if(busy)return;setBusy(true);setNotice('กำลังเตรียมใบข่าว…');try{valid(n);setPreview(URL.createObjectURL(await png(n,school,prefs.director)));setPreviewTheme(n.theme);setNotice('');}catch(e){setNotice((e as Error).message);}finally{setBusy(false);}};
  const exportOne=async(n:News)=>{if(busy)return;setBusy(true);try{valid(n);download(await png(n,school,prefs.director),n.headline.replace(/[\\/:*?"<>|]/g,'-')+'.png');recordUse([n.theme]);setNotice('ดาวน์โหลดเรียบร้อย');}catch(e){setNotice((e as Error).message);}finally{setBusy(false);}};
  const exportAll=async()=>{if(busy||!news.length)return;setBusy(true);setNotice('กำลังเตรียมข่าวทั้งชุด…');try{news.forEach(valid);const files=[];for(const [i,n] of news.entries())files.push({name:`news-${i+1}.png`,data:new Uint8Array(await(await png(n,school,prefs.director)).arrayBuffer())});download(zipStore(files),'Padeng-PR-News.zip');recordUse(news.map(n=>n.theme));setNotice('ดาวน์โหลดข่าวทั้งชุดเรียบร้อย');}catch(e){setNotice((e as Error).message);}finally{setBusy(false);}};
  return <div className="shell">
@@ -81,13 +83,16 @@ export default function Page(){
       <div className={'layout-workspace '+(cardViews[n.id]==='preview'?'show-preview':'show-editor')}><Preview key={n.id+':'+driveList.map(t=>t.id+JSON.stringify([t.headline,t.photos,t.body])).join('|')} news={n} school={school} director={prefs.director} ready={!driveLoading} onOpen={()=>openPreview(n)}/><div className="layout-editor">
        <div className="panel-title"><Images size={18}/><strong>ภาพและสไตล์ข่าว</strong></div>
        <div className="arrange-actions"><button className="secondary" disabled={busy} onClick={()=>openPicker(n.id)}><FolderOpen size={16}/>เปลี่ยนอัลบั้ม</button><button className="secondary shuffle-button" disabled={busy||driveLoading} onClick={()=>shuffleNewsTemplate(n.id)}><RefreshCw size={16}/>{driveLoading?'กำลังโหลดแม่แบบ…':'สุ่มแม่แบบถัดไป'}</button></div>
-       <p className="hint">สุ่มวนครบทุกแม่แบบในตัวและจาก Drive โดยไม่ซ้ำในรอบ และคงภาพที่เลือกไว้ ({allThemes.length} แบบ){driveError?' · '+driveError:''}</p>
-       <p className="hint">เลือกจากความละเอียด แนวภาพ และกระจายลำดับภาพในอัลบั้ม เปลี่ยนภาพเองได้ ({n.selected.length}/6)</p>
-       <div className="photo-count-control"><span>จำนวนภาพ</span>{[3,4,5,6].map(count=><button key={count} aria-pressed={n.selected.length===count} disabled={busy||n.photos.length<count} onClick={()=>{const extra=pickPhotos(n.photos,n.album?.cover_id).filter(id=>!n.selected.includes(id));patch(n.id,{selected:[...n.selected,...extra].slice(0,count)});}}>{count}</button>)}</div>
-       <div className="photo-strip layout-photos">{n.photos.map(p=><button disabled={busy} key={p.id} className={n.selected.includes(p.id)?'chosen':''} aria-label={'เลือกภาพ '+(p.file_name||p.id)} aria-pressed={n.selected.includes(p.id)} onClick={()=>{if(n.selected.includes(p.id)){if(n.selected.length===1){setNotice('ต้องมีภาพอย่างน้อย 1 ภาพ');return;}patch(n.id,{selected:n.selected.filter(id=>id!==p.id)});}else if(n.selected.length<6)patch(n.id,{selected:[...n.selected,p.id]});else setNotice('เลือกได้สูงสุด 6 ภาพ ยกเลิกภาพเดิมก่อน');}}><img loading="lazy" src={'/api/pr/image/'+p.id+'/thumb'} alt={p.file_name||'ภาพกิจกรรม'}/>{n.selected.includes(p.id)&&<span><Check size={13}/></span>}</button>)}</div>
-       <label className="field">แม่แบบประชาสัมพันธ์<select disabled={busy} value={n.theme} onChange={e=>patch(n.id,{theme:e.target.value,layout:undefined,templateShuffle:undefined})}>{allThemes.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
-       <div className="news-design-actions"><button className="secondary" aria-pressed={prefs.favorites.includes(n.theme)} onClick={()=>toggleFavorite(n.theme)}><Star size={15} fill={prefs.favorites.includes(n.theme)?'currentColor':'none'}/>{prefs.favorites.includes(n.theme)?'ติดดาวแล้ว':'ติดดาวแม่แบบ'}</button><button className="secondary" disabled={busy||driveLoading} onClick={()=>setEditorId(n.id)}><SlidersHorizontal size={15}/>ปรับแต่งแม่แบบ</button></div>
+       <p className="hint">สุ่มวนครบทุกแม่แบบในตัวและจาก Drive โดยไม่ซ้ำในรอบ และจัดจำนวนภาพให้ตรงกรอบ ({allThemes.length} แบบ){driveError?' · '+driveError:''}</p>
+       <p className="hint">เลือกจากความละเอียด แนวภาพ และกระจายลำดับภาพในอัลบั้ม เปลี่ยนภาพเองได้ ({n.selected.length}/{templateCapacity(n.theme)||6})</p>
+       <div className="photo-count-control"><span>จำนวนภาพ</span>{(templateCapacity(n.theme)?[templateCapacity(n.theme)!]:[3,4,5,6]).map(count=><button key={count} aria-pressed={n.selected.length===count} disabled={busy||n.photos.length<count} onClick={()=>{const extra=pickPhotos(n.photos,n.album?.cover_id).filter(id=>!n.selected.includes(id));patch(n.id,{selected:[...n.selected,...extra].slice(0,count)});}}>{count}</button>)}</div>
+       <div className="photo-strip layout-photos">{n.photos.map(p=><button disabled={busy} key={p.id} className={n.selected.includes(p.id)?'chosen':''} aria-label={'เลือกภาพ '+(p.file_name||p.id)} aria-pressed={n.selected.includes(p.id)} onClick={()=>{if(n.selected.includes(p.id)){if(n.selected.length===1){setNotice('ต้องมีภาพอย่างน้อย 1 ภาพ');return;}patch(n.id,{selected:n.selected.filter(id=>id!==p.id)});}else if(n.selected.length<(templateCapacity(n.theme)||6))patch(n.id,{selected:[...n.selected,p.id]});else setNotice('กรอบภาพเต็มแล้ว ยกเลิกภาพเดิมก่อนเลือกภาพใหม่');}}><img loading="lazy" src={'/api/pr/image/'+p.id+'/thumb'} alt={p.file_name||'ภาพกิจกรรม'}/>{n.selected.includes(p.id)&&<span><Check size={13}/></span>}</button>)}</div>
+       <label className="field">แม่แบบประชาสัมพันธ์<select disabled={busy} value={n.theme} onChange={e=>patch(n.id,{theme:e.target.value,selected:fitTemplatePhotos(n.selected,pickPhotos(n.photos,n.album?.cover_id),templateCapacity(e.target.value)),layout:undefined,templateShuffle:undefined})}>{allThemes.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
+       {isTemplateLocked(n.theme)&&<p className="locked-template-note">🔒 ล็อกตำแหน่งและขนาดตามแม่แบบ · เปลี่ยนข้อความและครอปภาพภายในกรอบได้{n.selected.length!==templateCapacity(n.theme)?' · ต้องเลือกภาพให้ครบ '+templateCapacity(n.theme)+' ภาพก่อนดาวน์โหลด':''}</p>}
+       <div className="news-design-actions"><button className="secondary" aria-pressed={prefs.favorites.includes(n.theme)} onClick={()=>toggleFavorite(n.theme)}><Star size={15} fill={prefs.favorites.includes(n.theme)?'currentColor':'none'}/>{prefs.favorites.includes(n.theme)?'ติดดาวแล้ว':'ติดดาวแม่แบบ'}</button><button className="secondary" disabled={busy||driveLoading} onClick={()=>setEditorId(n.id)}><SlidersHorizontal size={15}/>{isTemplateLocked(n.theme)?'ครอปภาพในกรอบ':'ปรับแต่งแม่แบบ'}</button></div>
        <div className="paste-heading"><h3>เล่าเรื่องของโรงเรียน</h3><p>วางพาดหัวและเนื้อข่าวที่เตรียมไว้</p></div>
+       {isTemplateLocked(n.theme)&&<label className="field">ฉบับที่ / วันที่ (ไม่บังคับ)<input disabled={busy} value={n.date} maxLength={70} placeholder="เช่น ฉบับที่ 01 · 4 พฤศจิกายน 2569" onChange={e=>patch(n.id,{date:e.target.value})}/></label>}
+       {isTemplateLocked(n.theme)&&<label className="field">ลิงก์สำหรับ QR (ไม่บังคับ)<input disabled={busy} type="url" value={n.sourceUrl||''} maxLength={1000} placeholder="https://…" onChange={e=>patch(n.id,{sourceUrl:e.target.value})}/></label>}
        <label className="field">พาดหัวข่าว<input disabled={busy} value={n.headline} onChange={e=>patch(n.id,{headline:e.target.value})} placeholder="วางพาดหัวข่าวที่เตรียมไว้" maxLength={100}/></label>
        <label className="field">เนื้อข่าว<textarea disabled={busy} rows={6} value={n.body} onChange={e=>patch(n.id,{body:e.target.value})} placeholder="วางเนื้อข่าวที่เตรียมไว้ ระบบจะจัดข้อความลงแม่แบบตามที่วาง" maxLength={4000}/></label>
        <div className="result-actions"><button className="secondary" disabled={busy||driveLoading||!n.headline.trim()||!n.body.trim()} onClick={()=>openPreview(n)}>ดูเต็ม / PDF</button><button className="primary" disabled={busy||driveLoading||!n.headline.trim()||!n.body.trim()} onClick={()=>exportOne(n)}><Download size={16}/>ดาวน์โหลด PNG</button></div>
@@ -104,4 +109,3 @@ export default function Page(){
   {preview&&<div className="overlay preview-overlay"><section className="preview-modal"><div className="preview-tools"><button className="secondary" onClick={()=>{window.print();if(previewTheme)recordUse([previewTheme]);}}>พิมพ์ / บันทึก PDF</button><button className="secondary" onClick={()=>setPreview(null)}>ปิด <X size={16}/></button></div><img className="print-news" src={preview} alt="ใบข่าวประชาสัมพันธ์ฉบับเต็ม"/></section></div>}
  </div>;
 }
-
