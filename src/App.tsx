@@ -34,13 +34,25 @@ export default function Page(){
  setPersonalTemplates(prefs.personal);
  const [cardViews,setCardViews]=useState<Record<string,'edit'|'preview'>>({});
  const [driveList,setDriveList]=useState<DriveTemplate[]>([]),[driveError,setDriveError]=useState(''),[driveLoading,setDriveLoading]=useState(true);
+ const [hiddenBuiltinIds,setHiddenBuiltinIds]=useState<string[]>([]),[visibilityFileId,setVisibilityFileId]=useState('');
  const [googleClientId,setGoogleClientId]=useState(''),[googleReady,setGoogleReady]=useState(false);
  useEffect(()=>{let cancelled=false;fetch('/api/pr/templates/google-client').then(r=>r.json()).then(d=>{if(!cancelled)setGoogleClientId(d.clientId||'');}).catch(()=>{});const script=document.createElement('script');script.src='https://accounts.google.com/gsi/client';script.async=true;script.onload=()=>{if(!cancelled)setGoogleReady(true);};document.head.appendChild(script);return()=>{cancelled=true;script.remove();};},[]);
- const catalogue:CatalogueItem[]=[...themes.map(t=>({...t})),...driveList.map(t=>({...t})),...prefs.personal.map(t=>({...getReferenceTemplate(t.sourceTheme),id:t.id,name:t.name,personal:true,photoCount:t.layout.photos.length,fileId:driveList.find(d=>d.id===t.sourceTheme)?.fileId}))];
- const allThemes=catalogue.map(t=>({id:t.id,name:t.name}));
+ const catalogue:CatalogueItem[]=[...themes.map(t=>({...t,hidden:hiddenBuiltinIds.includes(t.id),createdAt:Date.parse(t.id.startsWith('reference:')?'2026-11-04T14:49:38Z':'2026-11-04T08:44:59Z')})),...driveList.map(t=>({...t})),...prefs.personal.map(t=>({...getReferenceTemplate(t.sourceTheme),id:t.id,name:t.name,personal:true,createdAt:t.createdAt,photoCount:t.layout.photos.length,fileId:driveList.find(d=>d.id===t.sourceTheme)?.fileId}))];
+ const allThemes=catalogue.filter(t=>!t.hidden).map(t=>({id:t.id,name:t.name}));
  const editorNews=news.find(n=>n.id===editorId);
  const useTheme=(id:string)=>{setNews(items=>items.map(n=>({...n,theme:id,selected:fitTemplatePhotos(n.selected,pickPhotos(n.photos,n.album?.cover_id),templateCapacity(id)),layout:undefined,templateShuffle:undefined})));setTab('news');setNotice('ใช้แม่แบบกับข่าวทั้งชุดแล้ว');};
  const deletePersonal=(id:string)=>{const t=prefs.personal.find(t=>t.id===id);if(!t)return;setNews(items=>items.map(n=>n.theme===id?{...n,theme:t.sourceTheme,layout:n.layout||t.layout}:n));setPrefs(p=>({...p,personal:p.personal.filter(t=>t.id!==id),favorites:p.favorites.filter(x=>x!==id)}));};
+ const changeVisibility=(id:string)=>{
+  const item=catalogue.find(t=>t.id===id);if(!item||item.personal||id.startsWith('drive:')||busy)return;
+  const willHide=!item.hidden;if(!window.confirm((willHide?'ซ่อน':'แสดง')+'แม่แบบ “'+item.name+'” สำหรับทุกอุปกรณ์?'))return;
+  if(!visibilityFileId||!googleClientId||!googleReady||!(window as any).google?.accounts?.oauth2){setNotice('ยังเตรียมการจัดการแม่แบบไม่ได้ กรุณาโหลดหน้าใหม่');return;}
+  const client=(window as any).google.accounts.oauth2.initTokenClient({client_id:googleClientId,scope:'https://www.googleapis.com/auth/drive',error_callback:()=>setNotice('ยกเลิกหรือเข้าสู่ระบบ Google ไม่สำเร็จ'),callback:async(token:any)=>{
+   if(!token.access_token){setNotice('ไม่ได้รับสิทธิ์จัดการแม่แบบ');return;}setBusy(true);
+   try{const headers={Authorization:'Bearer '+token.access_token};const source=await fetch('https://www.googleapis.com/drive/v3/files/'+encodeURIComponent(visibilityFileId)+'?alt=media&supportsAllDrives=true',{headers,cache:'no-store'});if(!source.ok)throw Error('อ่านการตั้งค่าแม่แบบไม่สำเร็จ ('+source.status+')');const data=await source.json();const ids=Array.isArray(data.hiddenBuiltinIds)?data.hiddenBuiltinIds.filter((v:unknown)=>typeof v==='string'):[];data.hiddenBuiltinIds=willHide?[...new Set([...ids,id])]:ids.filter((x:string)=>x!==id);
+    const update=await fetch('https://www.googleapis.com/upload/drive/v3/files/'+encodeURIComponent(visibilityFileId)+'?uploadType=media&supportsAllDrives=true',{method:'PATCH',headers:{...headers,'Content-Type':'application/json'},body:JSON.stringify(data)});if(!update.ok)throw Error('บันทึกไม่สำเร็จ ตรวจสอบสิทธิ์ Google Drive ('+update.status+')');setHiddenBuiltinIds(data.hiddenBuiltinIds);await loadDrive(true);setNotice(willHide?'ซ่อนแม่แบบทุกอุปกรณ์แล้ว':'แสดงแม่แบบทุกอุปกรณ์แล้ว');
+   }catch(e){setNotice((e as Error).message||'บันทึกไม่สำเร็จ');}finally{setBusy(false);}
+  }});client.requestAccessToken({prompt:''});
+ };
  const deleteTemplate=(id:string)=>{
   const item=catalogue.find(t=>t.id===id);if(!item||busy)return;
   if(item.personal){if(window.confirm('ลบแม่แบบส่วนตัว “'+item.name+'” จากอุปกรณ์นี้?'))deletePersonal(id);return;}
@@ -55,8 +67,9 @@ export default function Page(){
   }});client.requestAccessToken({prompt:''});
  };
  const themeName=(id:string)=>allThemes.find(t=>t.id===id)?.name||(id.startsWith('drive:')?'แม่แบบจาก Drive':'');
- const loadDrive=async(refresh=false)=>{setDriveLoading(true);try{const r=await fetch('/api/pr/templates'+(refresh?'?refresh=1':''));const d:any=await r.json();if(!r.ok||d.error)throw Error(d.error||'โหลดแม่แบบจาก Google Drive ไม่สำเร็จ');setDriveTemplates(d.templates||[]);setDriveList(d.templates||[]);setDriveError('');}catch(e){setDriveError((e as Error).message||'โหลดแม่แบบจาก Google Drive ไม่สำเร็จ');}finally{setDriveLoading(false);}};
+ const loadDrive=async(refresh=false)=>{setDriveLoading(true);try{const r=await fetch('/api/pr/templates'+(refresh?'?refresh=1':''));const d:any=await r.json();if(!r.ok||d.error)throw Error(d.error||'โหลดแม่แบบจาก Google Drive ไม่สำเร็จ');setDriveTemplates(d.templates||[]);setDriveList(d.templates||[]);setHiddenBuiltinIds(Array.isArray(d.hiddenBuiltinIds)?d.hiddenBuiltinIds:[]);setVisibilityFileId(d.visibilityFileId||'');setDriveError('');}catch(e){setDriveError((e as Error).message||'โหลดแม่แบบจาก Google Drive ไม่สำเร็จ');}finally{setDriveLoading(false);}};
  useEffect(()=>{loadDrive();},[]);
+ useEffect(()=>{const refresh=()=>{if(document.visibilityState==='visible')loadDrive(true);};document.addEventListener('visibilitychange',refresh);const timer=setInterval(refresh,60000);return()=>{document.removeEventListener('visibilitychange',refresh);clearInterval(timer);};},[]);
  useEffect(()=>{try{
   const saved=JSON.parse(localStorage.getItem(STORAGE)||localStorage.getItem('padeng-pr-v1')||'null');
   if(Array.isArray(saved?.news))setNews(saved.news.filter((n:any)=>n.album&&Array.isArray(n.photos)&&n.selected?.length).slice(0,5).map((n:any)=>({id:n.id||crypto.randomUUID(),album:n.album,photos:n.photos,selected:n.selected.slice(0,6),theme:themes.some(t=>t.id===n.theme)||String(n.theme).startsWith('drive:')||String(n.theme).startsWith('local:')?n.theme:'blue',headline:n.headline||'',body:n.body||'',date:n.date||'',sourceUrl:n.sourceUrl||'',templateShuffle:n.templateShuffle,layout:n.layout,crop:n.crop})));
@@ -73,9 +86,10 @@ export default function Page(){
    const data=await api('/api/pr/albums/'+album.id);const photos:ActivityPhoto[]=data.photos||[];
    const selected=pickPhotos(photos,data.album.cover_id);
    if(!selected.length)throw Error('อัลบั้มนี้ยังไม่มีภาพ กรุณาเลือกอัลบั้มอื่น');
-   const theme=pickTheme(photos.filter(p=>selected.includes(p.id)),data.album.title);
-   if(picker==='new'){const item:News={id:crypto.randomUUID(),album:data.album,photos,selected,theme,headline:'',body:'',date:''};setNews(current=>current.length<5?[...current,item]:current);}
-   else patch(picker,{album:data.album,photos,selected,theme,layout:undefined,crop:undefined,templateShuffle:undefined});
+   const recommended=pickTheme(photos.filter(p=>selected.includes(p.id)),data.album.title);const theme=allThemes.some(t=>t.id===recommended)?recommended:allThemes[0]?.id;if(!theme)throw Error('ไม่มีแม่แบบที่เปิดใช้งาน');
+   const fitted=fitTemplatePhotos(selected,pickPhotos(photos,data.album.cover_id),templateCapacity(theme));
+   if(picker==='new'){const item:News={id:crypto.randomUUID(),album:data.album,photos,selected:fitted,theme,headline:'',body:'',date:''};setNews(current=>current.length<5?[...current,item]:current);}
+   else patch(picker,{album:data.album,photos,selected:fitted,theme,layout:undefined,crop:undefined,templateShuffle:undefined});
    setPicker(null);setTab('news');setNotice('เลือกภาพและแม่แบบให้แล้ว วางพาดหัวกับเนื้อข่าวได้เลย');
   }catch(e){setAlbumError((e as Error).message);}finally{setLoading(false);}
  };
@@ -113,7 +127,7 @@ export default function Page(){
        <div className="result-actions"><button className="secondary" disabled={busy||driveLoading||!n.headline.trim()||!n.body.trim()} onClick={()=>openPreview(n)}>ดูเต็ม / PDF</button><button className="primary" disabled={busy||driveLoading||!n.headline.trim()||!n.body.trim()} onClick={()=>exportOne(n)}><Download size={16}/>ดาวน์โหลด PNG</button></div>
       </div></div></article>)}
     </>}
-    {tab==='templates'&&<TemplateLibrary items={catalogue} director={prefs.director} favorites={prefs.favorites} usage={prefs.usage} onFavorite={toggleFavorite} onUse={useTheme} onDelete={deleteTemplate} disabled={busy||!news.length||driveLoading}/>}
+    {tab==='templates'&&<TemplateLibrary items={catalogue} director={prefs.director} favorites={prefs.favorites} usage={prefs.usage} onFavorite={toggleFavorite} onUse={useTheme} onDelete={deleteTemplate} onVisibility={changeVisibility} disabled={busy||!news.length||driveLoading}/>}
     {tab==='templates'&&<div className="drive-bar"><span>{driveError||('แม่แบบจาก Google Drive '+driveList.length+' แบบ')}</span><button className="secondary" onClick={()=>loadDrive(true)}><RefreshCw size={16}/>โหลดแม่แบบใหม่</button></div>}
     {tab==='settings'&&<div className="settings-card"><div className="settings-identity"><span>บ.ป.ด.</span><div><h2>{school}</h2><p>พื้นที่ข่าวประชาสัมพันธ์ของคุณ</p></div></div><label className="field">ชื่อโรงเรียน<input value={school} onChange={e=>setSchool(e.target.value)} maxLength={100}/></label><div className="director-settings"><div className="director-profile-preview">{prefs.director.image?<img src={prefs.director.image} alt="รูป ผอ. ที่เลือก"/>:<span>ผอ.</span>}</div><div><h3>รูปผู้อำนวยการ</h3><p>ใช้ด้านบนของทุกแม่แบบ รูปและการตั้งค่าบันทึกบนอุปกรณ์นี้</p><label className="secondary portrait-upload"><Upload size={15}/>{portraitBusy?'กำลังเตรียมรูป…':'อัปโหลดรูป ผอ.'}<input type="file" accept="image/jpeg,image/png,image/webp" aria-label="อัปโหลดรูป ผอ." disabled={portraitBusy} onChange={async e=>{const file=e.target.files?.[0];if(!file)return;setPortraitBusy(true);try{const image=await portraitData(file);setPrefs(p=>({...p,director:{...p.director,image}}));setNotice('บันทึกรูป ผอ. แล้ว ทุกแม่แบบจะใช้รูปนี้');}catch(error){setNotice((error as Error).message);}finally{setPortraitBusy(false);e.target.value='';}}}/></label>{prefs.director.image&&<button className="remove-portrait" onClick={()=>setPrefs(p=>({...p,director:{...p.director,image:''}}))}>นำรูปออก</button>}</div></div><label className="field">ชื่อผู้อำนวยการ<input maxLength={80} value={prefs.director.name} onChange={e=>setPrefs(p=>({...p,director:{...p.director,name:e.target.value}}))} placeholder="ชื่อ–นามสกุล ผอ."/></label><label className="field">ตำแหน่ง<input maxLength={80} value={prefs.director.title} onChange={e=>setPrefs(p=>({...p,director:{...p.director,title:e.target.value}}))}/></label><p>ฉบับร่าง ดาว อันดับการใช้ และแม่แบบที่ปรับเองบันทึกบนอุปกรณ์นี้ ภาพกิจกรรมอ่านจากอัลบั้มโรงเรียน</p><p>ระบบจัดภาพ แม่แบบ และข้อความที่คุณวางลงใบข่าว ไม่มีการเขียนหรือปรับภาษาข่าวอัตโนมัติ</p></div>}
     <footer><span>ป่าเด็ง PR Studio</span><span>ทุกเรื่องราวของโรงเรียน เริ่มต้นที่นี่</span></footer>
@@ -124,4 +138,5 @@ export default function Page(){
   {preview&&<div className="overlay preview-overlay"><section className="preview-modal"><div className="preview-tools"><button className="secondary" onClick={()=>{window.print();if(previewTheme)recordUse([previewTheme]);}}>พิมพ์ / บันทึก PDF</button><button className="secondary" onClick={()=>setPreview(null)}>ปิด <X size={16}/></button></div><img className="print-news" src={preview} alt="ใบข่าวประชาสัมพันธ์ฉบับเต็ม"/></section></div>}
  </div>;
 }
+
 

@@ -12,7 +12,7 @@ export interface DriveEnv {
 
 export type Box = {x:number;y:number;w:number;h?:number;size?:number;color?:string};
 export type DriveTemplate = {
- id:string; name:string; fileId:string; fromConfig?:boolean;
+ id:string; name:string; fileId:string; fromConfig?:boolean;createdAt?:number;
  headline:Box; photos:Box&{h:number;layout?:'hero'|'grid';pattern?:PhotoPattern}; body:Box&{h:number};director?:Rect;photoCount?:number;locked?:boolean;fixedLayout?:PageLayout;
 };
 
@@ -72,32 +72,27 @@ export function buildTemplates(files:{id:string;name:string;mimeType:string}[],c
  return out;
 }
 
-async function loadTemplates(env:DriveEnv):Promise<DriveTemplate[]>{
+async function loadTemplates(env:DriveEnv){
  const q=encodeURIComponent(`'${env.TEMPLATE_DRIVE_FOLDER_ID}' in parents and trashed=false`);
- const list:any=await (await drive(env,`/files?q=${q}&fields=files(id,name,mimeType)&orderBy=name&pageSize=100&supportsAllDrives=true&includeItemsFromAllDrives=true`)).json();
+ const list:any=await (await drive(env,`/files?q=${q}&fields=files(id,name,mimeType,createdTime)&orderBy=name&pageSize=1000&supportsAllDrives=true&includeItemsFromAllDrives=true`)).json();
  const files=list.files||[];
  const cfg=files.find((f:any)=>f.name==='templates.json');
  let config=null;
  // ถ้ามี templates.json แต่อ่านไม่ได้ ต้องแจ้ง error ไม่ใช้ตำแหน่งมาตรฐานแทนแบบเงียบ ๆ
  if(cfg){const text=await (await drive(env,`/files/${cfg.id}?alt=media&supportsAllDrives=true`)).text();try{config=JSON.parse(text.replace(/^\uFEFF/,''));}catch{throw new Error('templates.json ใน Drive อ่านไม่ได้ (รูปแบบ JSON ไม่ถูกต้อง)');}}
- return buildTemplates(files,config);
+ const stateFile=files.find((f:any)=>f.name==='template-visibility.json');let hiddenBuiltinIds:string[]=[];
+ if(stateFile){const s=JSON.parse(await(await drive(env,`/files/${stateFile.id}?alt=media&supportsAllDrives=true`)).text());if(Array.isArray(s.hiddenBuiltinIds))hiddenBuiltinIds=s.hiddenBuiltinIds.filter((x:unknown)=>typeof x==='string'&&/^(blue|forest|editorial|reference:[0-9]{2})$/.test(x));}
+ return {templates:buildTemplates(files,config).map(t=>({...t,createdAt:Date.parse(files.find((f:any)=>f.id===t.fileId)?.createdTime)||0})),hiddenBuiltinIds,visibilityFileId:stateFile?.id||''};
 }
 
-const CACHE_LIST='https://templates.internal/list-v3';
 export async function templatesApi(req:Request,env:DriveEnv,ctx?:{waitUntil(p:Promise<unknown>):void}):Promise<Response|null>{
  const u=new URL(req.url);
  if(req.method!=='GET')return null;
  if(u.pathname==='/api/pr/templates/google-client')return json({clientId:env.GOOGLE_DRIVE_CLIENT_ID||''});
  if(u.pathname==='/api/pr/templates'){
   if(!driveReady(env))return json({templates:[],configured:false});
-  const cache=(globalThis as any).caches?.default as Cache|undefined;
-  const fresh=u.searchParams.has('refresh');
-  if(cache&&!fresh){const hit=await cache.match(CACHE_LIST);if(hit)return json(await hit.json());}
   try{
-   const data={templates:await loadTemplates(env),configured:true};
-   // ไม่จำรายการที่ยังไม่มี templates.json (อาจกำลังอัปโหลดอยู่)
-   if(cache&&data.templates.every(t=>t.fromConfig)){const p=cache.put(CACHE_LIST,Response.json(data,{headers:{'Cache-Control':'max-age=600'}}));ctx?ctx.waitUntil(p):await p;}
-   return json(data);
+   return json({...await loadTemplates(env),configured:true});
   }catch(e){return json({templates:[],configured:true,error:e instanceof Error?e.message:'โหลดแม่แบบไม่สำเร็จ'},502);}
  }
  const m=u.pathname.match(/^\/api\/pr\/template\/([A-Za-z0-9_-]{10,100})$/);
@@ -142,6 +137,7 @@ export async function syncTemplates(env:DriveEnv,assets:{fetch(r:Request):Promis
  if(!put.ok)throw new Error('update templates.json '+put.status);
  return {uploaded,templates:merged.length};
 }
+
 
 
 
