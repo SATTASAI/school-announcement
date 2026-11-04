@@ -11,7 +11,7 @@ export interface DriveEnv {
 
 export type Box = {x:number;y:number;w:number;h?:number;size?:number;color?:string};
 export type DriveTemplate = {
- id:string; name:string; fileId:string;
+ id:string; name:string; fileId:string; fromConfig?:boolean;
  headline:Box; photos:Box&{h:number;layout?:'hero'|'grid'}; body:Box&{h:number};
 };
 
@@ -62,7 +62,7 @@ export function buildTemplates(files:{id:string;name:string;mimeType:string}[],c
  for(const t of listed){
   const f=images.find(i=>i.name===t?.file||i.id===t?.file);
   if(!f||used.has(f.id))continue;used.add(f.id);
-  out.push({id:'drive:'+f.id,fileId:f.id,name:String(t.name||f.name).slice(0,60),headline:box(t.headline,DEFAULT_SLOTS.headline),photos:box(t.photos,DEFAULT_SLOTS.photos),body:box(t.body,DEFAULT_SLOTS.body)});
+  out.push({id:'drive:'+f.id,fileId:f.id,fromConfig:true,name:String(t.name||f.name).slice(0,60),headline:box(t.headline,DEFAULT_SLOTS.headline),photos:box(t.photos,DEFAULT_SLOTS.photos),body:box(t.body,DEFAULT_SLOTS.body)});
  }
  for(const f of images)if(!used.has(f.id))out.push({id:'drive:'+f.id,fileId:f.id,name:f.name.replace(/\.[^.]+$/,'').slice(0,60),...structuredClone(DEFAULT_SLOTS)});
  return out;
@@ -74,11 +74,12 @@ async function loadTemplates(env:DriveEnv):Promise<DriveTemplate[]>{
  const files=list.files||[];
  const cfg=files.find((f:any)=>f.name==='templates.json');
  let config=null;
- if(cfg){try{config=await (await drive(env,`/files/${cfg.id}?alt=media&supportsAllDrives=true`)).json();}catch{config=null;}}
+ // ถ้ามี templates.json แต่อ่านไม่ได้ ต้องแจ้ง error ไม่ใช้ตำแหน่งมาตรฐานแทนแบบเงียบ ๆ
+ if(cfg){const text=await (await drive(env,`/files/${cfg.id}?alt=media&supportsAllDrives=true`)).text();try{config=JSON.parse(text.replace(/^\uFEFF/,''));}catch{throw new Error('templates.json ใน Drive อ่านไม่ได้ (รูปแบบ JSON ไม่ถูกต้อง)');}}
  return buildTemplates(files,config);
 }
 
-const CACHE_LIST='https://templates.internal/list';
+const CACHE_LIST='https://templates.internal/list-v2';
 export async function templatesApi(req:Request,env:DriveEnv,ctx?:{waitUntil(p:Promise<unknown>):void}):Promise<Response|null>{
  const u=new URL(req.url);
  if(req.method!=='GET')return null;
@@ -89,7 +90,8 @@ export async function templatesApi(req:Request,env:DriveEnv,ctx?:{waitUntil(p:Pr
   if(cache&&!fresh){const hit=await cache.match(CACHE_LIST);if(hit)return json(await hit.json());}
   try{
    const data={templates:await loadTemplates(env),configured:true};
-   if(cache){const p=cache.put(CACHE_LIST,Response.json(data,{headers:{'Cache-Control':'max-age=600'}}));ctx?ctx.waitUntil(p):await p;}
+   // ไม่จำรายการที่ยังไม่มี templates.json (อาจกำลังอัปโหลดอยู่)
+   if(cache&&data.templates.every(t=>t.fromConfig)){const p=cache.put(CACHE_LIST,Response.json(data,{headers:{'Cache-Control':'max-age=600'}}));ctx?ctx.waitUntil(p):await p;}
    return json(data);
   }catch(e){return json({templates:[],configured:true,error:e instanceof Error?e.message:'โหลดแม่แบบไม่สำเร็จ'},502);}
  }
