@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {pickPhotos,pickTheme} from '../lib/news-layout.ts';
+import {pickPhotos,pickTheme,shuffleTemplate} from '../lib/news-layout.ts';
 import {prApi} from '../worker/pr-api.ts';
 import {buildTemplates,templatesApi} from '../worker/templates.ts';
 const photos=Array.from({length:20},(_,i)=>({id:i+1,width:i===4?100:1600,height:i===4?100:1000}));
@@ -24,3 +24,33 @@ assert.deepEqual((await (await templatesApi(new Request('https://school.test/api
 assert.equal(await templatesApi(new Request('https://school.test/api/pr/albums'),{}),null);
 console.log('Drive templates: merge, clamping, defaults and unconfigured fallback passed.');
 console.log('Passed photo selection, duplicates, small-image rejection, orientation, template choice and removal of AI endpoint.');
+
+// Exercise all loaded built-ins + Drive templates over several complete rounds.
+const catalogue=['blue','forest','editorial',...Array.from({length:21},(_,i)=>'drive:'+i)];
+let current='blue',state;
+const initial=[current];
+for(let i=1;i<catalogue.length;i++){
+ const next=shuffleTemplate(catalogue,current,state,()=>0.37);
+ assert.notEqual(next.theme,current);initial.push(next.theme);current=next.theme;state=next.state;
+}
+assert.deepEqual(new Set(initial),new Set(catalogue));
+for(let round=0;round<4;round++){
+ const drawn=[];
+ for(let i=0;i<catalogue.length;i++){
+  const next=shuffleTemplate(catalogue,current,state,()=>0.37);
+  assert.notEqual(next.theme,current);drawn.push(next.theme);current=next.theme;state=next.state;
+ }
+ assert.deepEqual(new Set(drawn),new Set(catalogue));
+}
+// JSON roundtrip preserves progress when a draft is reopened.
+const restored=JSON.parse(JSON.stringify(state));
+assert.deepEqual(shuffleTemplate(catalogue,current,restored,()=>0.5),shuffleTemplate(catalogue,current,state,()=>0.5));
+// Added/removed Drive templates reset the round, without retaining stale IDs.
+const changed=['blue','drive:new'];
+let next=shuffleTemplate(changed,'blue',state,()=>0);
+assert.equal(next.theme,'drive:new');assert.deepEqual(next.state.pool,changed);
+assert.deepEqual(shuffleTemplate([],current,state),{theme:current,state:{pool:[],remaining:[]}});
+assert.equal(shuffleTemplate(['blue','blue'],'blue').theme,'blue');
+assert.equal(shuffleTemplate(['blue','drive:new'],'blue',{pool:['blue','drive:new'],remaining:['drive:new','drive:new','missing']}).theme,'drive:new');
+console.log('Shuffle: 24 templates, five non-repeating rounds, round boundaries, persisted progress, catalogue changes passed.');
+

@@ -29,3 +29,25 @@ export function pickTheme(photos:ActivityPhoto[],albumTitle=''):ThemeId{
  const portraits=photos.filter(p=>p.width&&p.height&&p.height>p.width).length;
  return photos.length<=2||portraits>photos.length/2?'editorial':'blue';
 }
+
+
+export type TemplateShuffleState={pool:string[];remaining:string[]};
+
+/** Draw from every loaded template, without repeats until a round is exhausted. */
+export function shuffleTemplate(ids:string[],current:string,state?:TemplateShuffleState,rng:()=>number=Math.random):{theme:string;state:TemplateShuffleState}{
+ const pool=[...new Set(ids.filter(id=>typeof id==='string'&&id.length>0))];
+ if(!pool.length)return {theme:current,state:{pool,remaining:[]}};
+ const shuffle=(items:string[])=>{
+  for(let i=items.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[items[i],items[j]]=[items[j],items[i]];}
+  return items;
+ };
+ const previous=state;
+ const samePool=!!previous&&Array.isArray(previous.pool)&&Array.isArray(previous.remaining)&&previous.pool.length===pool.length&&new Set(previous.pool).size===pool.length&&pool.every(id=>previous.pool.includes(id));
+ let remaining=samePool?[...new Set(previous!.remaining.filter(id=>pool.includes(id)&&id!==current))]:shuffle(pool.filter(id=>id!==current));
+ if(!remaining.length){
+  remaining=shuffle([...pool]);
+  if(remaining.length>1&&remaining[0]===current)[remaining[0],remaining[1]]=[remaining[1],remaining[0]];
+ }
+ return {theme:remaining[0],state:{pool,remaining:remaining.slice(1)}};
+}
+
