@@ -19,7 +19,26 @@
 - `lib/` จัดภาพ/แม่แบบ และวาดใบข่าวด้วย canvas (ทำงานในเบราว์เซอร์)
 - `worker/` Cloudflare Worker: ตอบ `/api/pr/*` (proxy อ่านอย่างเดียวไปเว็บกิจกรรม) ที่เหลือส่งไฟล์จาก `dist/`
 
-ไม่มีฐานข้อมูล storage หรือ API Key
+ไม่มีฐานข้อมูล · แม่แบบเพิ่มเติมอ่านจาก Google Drive
+
+## แม่แบบจาก Google Drive
+
+ภาพแม่แบบเก็บในโฟลเดอร์ Drive "แม่แบบข่าว (PR Studio)" (`TEMPLATE_DRIVE_FOLDER_ID` ใน `wrangler.jsonc`) บัญชีเดียวกับระบบโรงเรียน
+Worker อ่านผ่าน `/api/pr/templates` (จำไว้ 10 นาที, กด "โหลดแม่แบบใหม่" ในหน้าแม่แบบเพื่อดึงทันที) และส่งภาพผ่าน `/api/pr/template/:fileId` เฉพาะไฟล์ในโฟลเดอร์นี้
+
+- ภาพพื้นหลัง PNG/JPG/WebP ขนาด A4 แนวตั้ง (แนะนำ 1240×1754)
+- `templates.json` ในโฟลเดอร์เดียวกัน (ไม่บังคับ) กำหนดชื่อและตำแหน่ง หน่วยพิกเซลบนหน้า 1240×1754:
+
+```json
+{"templates":[{"file":"blue-header.png","name":"น้ำเงินหัวโรงเรียน",
+  "headline":{"x":65,"y":300,"w":1110,"size":42,"color":"#143d73"},
+  "photos":{"x":65,"y":400,"w":1110,"h":700,"layout":"hero"},
+  "body":{"x":65,"y":1140,"w":1110,"h":500,"size":28,"color":"#27364a"}}]}
+```
+
+ภาพที่ไม่มีใน `templates.json` ใช้ตำแหน่งตามตัวอย่างด้านบน · `layout`: `hero` (ภาพใหญ่ 1 + เล็ก) หรือ `grid` (2 คอลัมน์)
+
+Secrets ของ Worker (ค่าเดียวกับ Worker `banpadeng-school-db` / `bpdactivity`): `GOOGLE_DRIVE_CLIENT_ID`, `GOOGLE_DRIVE_CLIENT_SECRET`, `GOOGLE_DRIVE_REFRESH_TOKEN` — ถ้ายังไม่ตั้ง ระบบใช้แม่แบบในตัว 3 แบบตามเดิม
 
 ## Development
 
