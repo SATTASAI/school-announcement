@@ -107,11 +107,17 @@ async function drawDirector(g:CanvasRenderingContext2D,r:Rect,profile?:DirectorP
 }
 export async function renderNews(n:any,school:string,director?:DirectorProfile,logo?:string){
  await document.fonts.ready;
+ const layout=getNewsLayout(n);
+ // Canvas does not initiate CSS font downloads by itself. Load the exact faces
+ // before measuring line breaks or painting, for previews and PNG alike.
+ for(const [slot,bold] of [[layout.headline,true],[layout.body,false],...(layout.directorName?[[layout.directorName,true] as const]:[])] as const){
+  const faces=await document.fonts.load(`${bold?'bold ':''}16px "${slot.font}"`,'ตัวอย่างข้อความภาษาไทย');
+  if(!faces.length&&!['Noto Sans Thai','Noto Serif Thai'].includes(slot.font))throw Error('โหลดฟอนต์ '+slot.font+' ไม่สำเร็จ กรุณาตรวจการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่');
+ }
  const canvas=document.createElement('canvas');canvas.width=1240;canvas.height=1754;const g=canvas.getContext('2d')!;
  const source=templateSource(n.theme),t=templateData(n.theme),reference=getReferenceTemplate(source);
  if(source.startsWith('drive:')&&!t)throw Error('แม่แบบยังโหลดไม่เสร็จหรือไม่พบแล้ว กรุณาโหลดแม่แบบใหม่');
  g.fillStyle='#fff';g.fillRect(0,0,1240,1754);
- const layout=getNewsLayout(n);
  if(reference)drawReferenceBackground(g,{...reference,layout},school,n.date||'');
  else if(t)g.drawImage(await loadImage('/api/pr/template/'+t.fileId,'โหลดแม่แบบจาก Google Drive ไม่สำเร็จ'),0,0,1240,1754);
  else{

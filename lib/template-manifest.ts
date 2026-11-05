@@ -1,4 +1,4 @@
-import type {PageLayout,Rect,TextSlot} from './design-layout.ts';
+import {isThaiFont,type PageLayout,type Rect,type TextSlot} from './design-layout.ts';
 
 /** The designer owns every coordinate. Values are page pixels at 1240 × 1754. */
 export type TemplateManifest={schemaVersion:1;file:string;name:string;canvas:{width:1240;height:1754};layout:PageLayout};
@@ -22,7 +22,7 @@ export function validateManifest(raw:unknown,expectedFile?:string):TemplateManif
   if(typeof v.color!=='string'||!/^#[0-9a-f]{6}$/i.test(v.color))return fail(label+' ต้องกำหนดสีเป็น #RRGGBB');
   if(!['left','center','right'].includes(v.align))return fail(label+' ต้องกำหนดการจัดข้อความ');
   if(v.verticalAlign!==undefined&&!['top','middle','bottom'].includes(v.verticalAlign))return fail(label+' ต้องกำหนดการจัดข้อความแนวตั้งให้ถูกต้อง');
-  if(!['Noto Sans Thai','Noto Serif Thai'].includes(v.font))return fail(label+' ต้องกำหนดฟอนต์ที่ระบบรองรับ');
+  if(!isThaiFont(v.font))return fail(label+' ต้องกำหนดฟอนต์ที่ระบบรองรับ');
   return {...r,size:v.size,color:v.color,align:v.align,font:v.font,...(v.verticalAlign?{verticalAlign:v.verticalAlign}:{})};
  };
  if(!m.layout||!Array.isArray(m.layout.photos)||m.layout.photos.length<1||m.layout.photos.length>6)return fail('ต้องมีกรอบภาพกิจกรรม 1–6 กรอบ');
