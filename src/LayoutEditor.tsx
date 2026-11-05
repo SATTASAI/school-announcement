@@ -1,16 +1,16 @@
 import {useEffect,useRef,useState} from 'react';
 import {X,Move,Maximize2,Save,RotateCcw,Crop as CropIcon} from 'lucide-react';
-import {getNewsLayout,png,isTemplateLocked} from '../lib/news-render';
+import {getNewsLayout,png} from '../lib/news-render';
 import {clamp,safeRect,safeCrop,type PageLayout,type Rect,type TextSlot,type DirectorProfile,type Crop} from '../lib/design-layout';
-type Part='headline'|'body'|'director'|`photo:${number}`;
+type Part='headline'|'body'|'director'|'logo'|`photo:${number}`;
 type EditableNews={id:string;theme:string;selected:number[];headline:string;body:string;layout?:PageLayout;crop?:Record<string,Crop>};
-const box=(layout:PageLayout,key:Part):Rect=>key.startsWith('photo:')?layout.photos[Number(key.split(':')[1])]:layout[key as 'headline'|'body'|'director'];
+const box=(layout:PageLayout,key:Part):Rect=>key.startsWith('photo:')?layout.photos[Number(key.split(':')[1])]:layout[key as 'headline'|'body'|'director'|'logo']!;
 function withBox(layout:PageLayout,key:Part,value:Rect):PageLayout{
  if(key.startsWith('photo:'))return {...layout,photos:layout.photos.map((r,i)=>i===Number(key.split(':')[1])?value:r)};
  return {...layout,[key]:{...layout[key as 'headline'|'body'|'director'],...value}};
 }
 export default function LayoutEditor({news,school,director,logo,onClose,onApply,onSave}:{news:EditableNews;school:string;director:DirectorProfile;logo:string;onClose:()=>void;onApply:(layout:PageLayout,crop:Record<string,Crop>)=>void;onSave:(layout:PageLayout,name:string)=>void}){
- const locked=isTemplateLocked(news.theme);
+ const locked=false;
  const [layout,setLayout]=useState<PageLayout>(()=>getNewsLayout(news)),[crops,setCrops]=useState<Record<string,Crop>>(news.crop||{}),[part,setPart]=useState<Part>('headline'),[mode,setMode]=useState<'move'|'crop'>('move');
  const [src,setSrc]=useState(''),[error,setError]=useState(''),[name,setName]=useState(''),[rendering,setRendering]=useState(false);
  const sheet=useRef<HTMLDivElement>(null);
@@ -32,8 +32,8 @@ export default function LayoutEditor({news,school,director,logo,onClose,onApply,
   if(d.mode==='crop')setCrops(c=>({...c,[d.id]:safeCrop({...d.crop,x:d.crop.x-dx/d.rect.w*2,y:d.crop.y-dy/d.rect.h*2})}));
   else updateRect(d.part,d.mode==='resize'?{w:Math.max(40,d.rect.w+dx),h:Math.max(40,d.rect.h+dy)}:{x:clamp(d.rect.x+dx,0,1240-d.rect.w),y:clamp(d.rect.y+dy,0,1754-d.rect.h)});
  };
- const keys:Part[]=['headline','body','director',...layout.photos.map((_,i)=>`photo:${i}` as Part)];
- const label=(key:Part)=>key==='headline'?'พาดหัว':key==='body'?'เนื้อข่าว':key==='director'?'รูป ผอ.':'ภาพ '+(Number(key.split(':')[1])+1);
+ const keys:Part[]=['headline','body','director',...(layout.logo?['logo' as Part]:[]),...layout.photos.map((_,i)=>`photo:${i}` as Part)];
+ const label=(key:Part)=>key==='headline'?'พาดหัว':key==='body'?'เนื้อข่าว':key==='director'?'รูป ผอ.':key==='logo'?'ตราโรงเรียน':'ภาพ '+(Number(key.split(':')[1])+1);
  return <div className="overlay design-overlay"><section className="design-modal" role="dialog" aria-modal="true" aria-label="ปรับแต่งแม่แบบ"><header className="design-top"><div><h2>ปรับแต่งแม่แบบ</h2><p>{locked?'ล็อกตำแหน่งและขนาด · เลือกกรอบภาพเพื่อเลื่อนและซูมภาพภายใน':'ลากย้าย · ดึงมุมเพื่อปรับขนาด · ใช้ลูกศรขยับทีละนิด'}</p></div><button className="icon-button" onClick={onClose} aria-label="ปิดตัวแก้ไข"><X/></button></header>
  <div className="design-content"><div className="design-canvas-wrap"><div className="canvas-status">{rendering?'กำลังปรับตัวอย่าง…':'ตัวอย่างตรงกับไฟล์ส่งออก'}<span>1240 × 1754</span></div><div ref={sheet} className="canvas-sheet" onPointerMove={move} onPointerUp={()=>{drag.current=null;}} onPointerCancel={()=>{drag.current=null;}}>
  {src?<img src={src} alt="ตัวอย่างแม่แบบที่กำลังปรับแต่ง" draggable={false}/>:<div className="canvas-loading">กำลังโหลดตัวอย่าง…</div>}
