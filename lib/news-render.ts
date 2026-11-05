@@ -22,7 +22,7 @@ export function templateSource(id:string){return personalTemplates.find(t=>t.id=
 function templateData(id:string){const source=templateSource(id);return driveTemplates.find(t=>t.id===source);}
 export function templateLogoFrame(id:string):Rect|undefined{
  const source=templateSource(id),reference=getReferenceTemplate(source);
- if(reference)return Number(source.slice(-2))>=11?{x:53,y:55,w:114,h:114}:{x:62,y:67,w:140,h:140};
+ if(reference)return reference.layout.logo|| (Number(source.slice(-2))>=11?{x:53,y:55,w:114,h:114}:{x:62,y:67,w:140,h:140});
  const drive=templateData(id);if(drive)return drive.fixedLayout?.logo;
  return {x:65,y:40,w:145,h:145};
 }
