@@ -1,5 +1,5 @@
 export type Rect={x:number;y:number;w:number;h:number};
-export type TextSlot=Rect&{size:number;color:string;align:'left'|'center'|'right';font:'Noto Sans Thai'|'Noto Serif Thai'};
+export type TextSlot=Rect&{size:number;color:string;align:'left'|'center'|'right';verticalAlign?:'top'|'middle'|'bottom';font:'Noto Sans Thai'|'Noto Serif Thai'};
 export type Crop={x:number;y:number;zoom:number};
 export type PhotoPattern='hero'|'grid'|'mosaic'|'portrait-pair'|'ribbon'|'stair'|'feature-right'|'columns'|'magazine'|'tiles';
 export const PHOTO_PATTERNS:PhotoPattern[]=['hero','grid','mosaic','portrait-pair','ribbon','stair','feature-right','columns','magazine','tiles'];
@@ -14,7 +14,8 @@ export function safeRect(raw:Partial<Rect>|undefined,base:Rect):Rect{
  return {x,y,w:clamp(finite(raw?.w,base.w),40,1240-x),h:clamp(finite(raw?.h,base.h),40,1754-y)};
 }
 export function safeText(raw:Partial<TextSlot>|undefined,base:TextSlot):TextSlot{
- return {...safeRect(raw,base),size:clamp(finite(raw?.size,base.size),16,96),color:typeof raw?.color==='string'&&/^#[0-9a-f]{6}$/i.test(raw.color)?raw.color:base.color,align:raw?.align==='center'||raw?.align==='right'?raw.align:'left',font:raw?.font==='Noto Serif Thai'?'Noto Serif Thai':'Noto Sans Thai'};
+ const verticalAlign=raw?.verticalAlign==='top'||raw?.verticalAlign==='middle'||raw?.verticalAlign==='bottom'?raw.verticalAlign:base.verticalAlign;
+ return {...safeRect(raw,base),size:clamp(finite(raw?.size,base.size),16,96),color:typeof raw?.color==='string'&&/^#[0-9a-f]{6}$/i.test(raw.color)?raw.color:base.color,align:raw?.align==='left'||raw?.align==='center'||raw?.align==='right'?raw.align:base.align,font:raw?.font==='Noto Serif Thai'||raw?.font==='Noto Sans Thai'?raw.font:base.font,...(verticalAlign?{verticalAlign}:{})};
 }
 export function safeCrop(raw:Partial<Crop>|undefined):Crop{return {x:clamp(finite(raw?.x,0),-1,1),y:clamp(finite(raw?.y,0),-1,1),zoom:clamp(finite(raw?.zoom,1),1,4)};}
 const gap=14;

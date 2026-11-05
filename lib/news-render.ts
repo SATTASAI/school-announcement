@@ -72,7 +72,9 @@ export function drawText(g:CanvasRenderingContext2D,value:string,s:TextSlot,bold
  if(size<8)throw Error('เนื้อหายาวเกินพื้นที่ของแม่แบบ แม้ปรับตัวอักษรแล้ว กรุณาย่อเนื้อหา หรือเลือกแม่แบบที่มีพื้นที่ข้อความมากขึ้น');
  g.fillStyle=s.color;g.textBaseline='top';g.textAlign=s.align;
  const x=s.align==='center'?s.x+s.w/2:s.align==='right'?s.x+s.w:s.x;
- const y=s.y+(centerY?Math.max(0,(s.h-wrapped.length*size*leading)/2):0);
+ const vertical=s.verticalAlign||(centerY?'middle':'top');
+ const spare=Math.max(0,s.h-wrapped.length*size*leading);
+ const y=s.y+(vertical==='middle'?spare/2:vertical==='bottom'?spare:0);
  g.save();g.beginPath();g.rect(s.x,s.y,s.w,s.h);g.clip();
  wrapped.forEach((line,i)=>g.fillText(line,x,y+i*size*leading));g.restore();g.textAlign='left';
 }
