@@ -9,5 +9,10 @@ assert(painted.length>1);assert(painted.every(line=>line.y+line.size<=frame.y+fr
 assert(painted[0].size<16,'long text should fit below the previous 16px limit');
 assert.equal(painted.map(line=>line.v).join(''),text);
 assert.throws(()=>drawText(g,text.repeat(100),frame),/เนื้อหายาวเกินพื้นที่/);
+const positions=[];
+for(const verticalAlign of ['top','middle','bottom']){painted.length=0;drawText(g,'ข่าวสั้น',{...frame,verticalAlign});positions.push(painted[0].y);}
+assert.equal(positions[0],frame.y);assert(positions[0]<positions[1]&&positions[1]<positions[2]);
+painted.length=0;drawText(g,'ข่าวสั้น',{...frame,verticalAlign:'top'},true,true);assert.equal(painted[0].y,frame.y,'explicit top overrides legacy headline centering');
+painted.length=0;drawText(g,'ข่าวสั้น',frame,true,true);assert.equal(painted[0].y,positions[1],'existing reference headline defaults to middle');
 console.log('Automatic text fitting: long content remains complete and within the fixed frame; excessive content is reported.');
 

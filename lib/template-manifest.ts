@@ -21,8 +21,9 @@ export function validateManifest(raw:unknown,expectedFile?:string):TemplateManif
   if(typeof v.size!=='number'||!Number.isFinite(v.size)||v.size<16||v.size>96)return fail(label+' ต้องมีขนาดตัวอักษร 16–96');
   if(typeof v.color!=='string'||!/^#[0-9a-f]{6}$/i.test(v.color))return fail(label+' ต้องกำหนดสีเป็น #RRGGBB');
   if(!['left','center','right'].includes(v.align))return fail(label+' ต้องกำหนดการจัดข้อความ');
+  if(v.verticalAlign!==undefined&&!['top','middle','bottom'].includes(v.verticalAlign))return fail(label+' ต้องกำหนดการจัดข้อความแนวตั้งให้ถูกต้อง');
   if(!['Noto Sans Thai','Noto Serif Thai'].includes(v.font))return fail(label+' ต้องกำหนดฟอนต์ที่ระบบรองรับ');
-  return {...r,size:v.size,color:v.color,align:v.align,font:v.font};
+  return {...r,size:v.size,color:v.color,align:v.align,font:v.font,...(v.verticalAlign?{verticalAlign:v.verticalAlign}:{})};
  };
  if(!m.layout||!Array.isArray(m.layout.photos)||m.layout.photos.length<1||m.layout.photos.length>6)return fail('ต้องมีกรอบภาพกิจกรรม 1–6 กรอบ');
  return {schemaVersion:1,file:m.file,name:m.name.trim(),canvas:{width:1240,height:1754},layout:{...(m.layout.logo!==undefined?{logo:rect(m.layout.logo,'ตราโรงเรียน')}:{}),headline:text(m.layout.headline,'พาดหัว'),body:text(m.layout.body,'เนื้อข่าว'),director:rect(m.layout.director,'ผอ.'),photos:m.layout.photos.map((v:any,i:number)=>rect(v,'ภาพ '+(i+1)))}};
