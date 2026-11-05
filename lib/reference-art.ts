@@ -1,5 +1,6 @@
 import type {ReferenceTemplate} from './reference-templates.ts';
 import type {Rect} from './design-layout.ts';
+import {drawSchoolArt5} from './school-art-5.ts';
 const W=1240,H=1754;
 function path(g:CanvasRenderingContext2D,points:number[][],fill:string){g.beginPath();points.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.closePath();g.fillStyle=fill;g.fill();}
 function panel(g:CanvasRenderingContext2D,r:Rect,fill:string,stroke:string,radius=20){g.beginPath();g.roundRect(r.x,r.y,r.w,r.h,radius);g.fillStyle=fill;g.fill();g.strokeStyle=stroke;g.lineWidth=3;g.stroke();}
@@ -13,6 +14,7 @@ function flower(g:CanvasRenderingContext2D,x:number,y:number,size:number,color:s
 function curve(g:CanvasRenderingContext2D,y:number,color:string,width:number){g.beginPath();g.moveTo(-70,y);g.bezierCurveTo(300,y-130,840,y+140,1310,y-10);g.lineWidth=width;g.strokeStyle=color;g.stroke();}
 /** Resolution-independent artwork; text and uploaded photos remain separate live layers. */
 export function drawReferenceBackground(g:CanvasRenderingContext2D,t:ReferenceTemplate,school:string,issue=''){
+ if(Number(t.id.split(':')[1])>=41){drawSchoolArt5(g,t,school,issue);return;}
  if(Number(t.id.slice(-2))>=31){drawOrnateCollection(g,t,school,issue);return;}
  if(Number(t.id.slice(-2))>=21){drawSchoolCollection3(g,t,school,issue);return;}
  if(Number(t.id.slice(-2))>=11){drawSchoolCollection(g,t,school,issue);return;}

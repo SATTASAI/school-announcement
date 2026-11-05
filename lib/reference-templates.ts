@@ -1,3 +1,4 @@
+import {schoolCollection5} from './school-collection-5.ts';
 import {schoolCollection4} from './school-collection-4.ts';
 import {schoolCollection3} from './school-collection-3.ts';
 import {schoolCollection} from './school-collection.ts';
@@ -700,5 +701,6 @@ export const referenceTemplates:ReferenceTemplate[]=[
   ,...schoolCollection
   ,...schoolCollection3
   ,...schoolCollection4
+  ,...schoolCollection5
 ];
 export const getReferenceTemplate=(id:string)=>referenceTemplates.find(t=>t.id===id);
