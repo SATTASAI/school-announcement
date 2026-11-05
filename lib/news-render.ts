@@ -58,14 +58,22 @@ function lines(g:CanvasRenderingContext2D,value:string,width:number){
  }
  return out;
 }
-function drawText(g:CanvasRenderingContext2D,value:string,s:TextSlot,bold=false,centerY=false){
- let size=s.size,wrapped:string[]=[];
- for(;size>=16;size--){g.font=`${bold?'bold ':''}${size}px "${s.font}",sans-serif`;wrapped=lines(g,value,s.w);if(wrapped.length*size*1.5<=s.h)break;}
- if(size<16)throw Error('ข้อความยาวเกินกรอบ กรุณาขยายกรอบ ลดขนาดตัวอักษร หรือย่อข้อความ');
+export function drawText(g:CanvasRenderingContext2D,value:string,s:TextSlot,bold=false,centerY=false){
+ let size=s.size,wrapped:string[]=[],leading=1.5;
+ // First keep comfortable spacing; for longer copy gradually tighten it and
+ // reduce the font, always rewrapping to the actual width of this template.
+ for(;size>=8;size--){
+  leading=size>=20?1.5:size>=14?1.35:1.2;
+  g.font=`${bold?'bold ':''}${size}px "${s.font}",sans-serif`;
+  wrapped=lines(g,value,s.w);
+  if(wrapped.length*size*leading<=s.h)break;
+ }
+ if(size<8)throw Error('เนื้อหายาวเกินพื้นที่ของแม่แบบ แม้ปรับตัวอักษรแล้ว กรุณาย่อเนื้อหา หรือเลือกแม่แบบที่มีพื้นที่ข้อความมากขึ้น');
  g.fillStyle=s.color;g.textBaseline='top';g.textAlign=s.align;
  const x=s.align==='center'?s.x+s.w/2:s.align==='right'?s.x+s.w:s.x;
- const y=s.y+(centerY?Math.max(0,(s.h-wrapped.length*size*1.5)/2):0);
- wrapped.forEach((line,i)=>g.fillText(line,x,y+i*size*1.5));g.textAlign='left';
+ const y=s.y+(centerY?Math.max(0,(s.h-wrapped.length*size*leading)/2):0);
+ g.save();g.beginPath();g.rect(s.x,s.y,s.w,s.h);g.clip();
+ wrapped.forEach((line,i)=>g.fillText(line,x,y+i*size*leading));g.restore();g.textAlign='left';
 }
 async function drawDirector(g:CanvasRenderingContext2D,r:Rect,profile?:DirectorProfile){
  g.save();rounded(g,r,16);g.fillStyle='#fffdf8';g.fill();g.strokeStyle='#d4b879';g.lineWidth=3;g.stroke();
