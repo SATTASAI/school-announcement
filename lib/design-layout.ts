@@ -3,7 +3,7 @@ export type TextSlot=Rect&{size:number;color:string;align:'left'|'center'|'right
 export type Crop={x:number;y:number;zoom:number};
 export type PhotoPattern='hero'|'grid'|'mosaic'|'portrait-pair'|'ribbon'|'stair'|'feature-right'|'columns'|'magazine'|'tiles';
 export const PHOTO_PATTERNS:PhotoPattern[]=['hero','grid','mosaic','portrait-pair','ribbon','stair','feature-right','columns','magazine','tiles'];
-export type PageLayout={headline:TextSlot;body:TextSlot;director:Rect;photos:Rect[];logo?:Rect};
+export type PageLayout={headline:TextSlot;body:TextSlot;director:Rect;photos:Rect[];logo?:Rect;directorName?:TextSlot;directorCrop?:Crop;directorLabel?:string};
 export type DirectorProfile={image:string;name:string;title:string};
 export type PersonalTemplate={id:string;name:string;sourceTheme:string;layout:PageLayout;createdAt:number};
 export const DEFAULT_DIRECTOR:Rect={x:1034,y:24,w:154,h:184};
@@ -61,5 +61,6 @@ export function photoFrames(area:Rect,count:number,pattern:PhotoPattern='hero'):
  return [{x:area.x,y:area.y,w:area.w,h:heroH},...rows({x:area.x,y:area.y+heroH+gap,w:area.w,h:area.h-heroH-gap},count-1,pattern==='ribbon'?count-1:Math.min(3,count-1))];
 }
 export function normaliseLayout(raw:Partial<PageLayout>|undefined,base:PageLayout):PageLayout{
- return {...(base.logo?{logo:safeRect(raw?.logo,base.logo)}:{}),headline:safeText(raw?.headline,base.headline),body:safeText(raw?.body,base.body),director:safeRect(raw?.director,base.director),photos:base.photos.map((r,i)=>safeRect(raw?.photos?.length===base.photos.length?raw.photos[i]:undefined,r))};
+ const name=raw?.directorName||base.directorName;
+ return {...(base.logo?{logo:safeRect(raw?.logo,base.logo)}:{}),headline:safeText(raw?.headline,base.headline),body:safeText(raw?.body,base.body),director:safeRect(raw?.director,base.director),photos:base.photos.map((r,i)=>safeRect(raw?.photos?.length===base.photos.length?raw.photos[i]:undefined,r)),...(name?{directorName:safeText(name,name)}:{}),...((raw?.directorCrop||base.directorCrop)?{directorCrop:safeCrop(raw?.directorCrop||base.directorCrop)}:{}),...(typeof raw?.directorLabel==='string'?{directorLabel:raw.directorLabel.slice(0,100)}:typeof base.directorLabel==='string'?{directorLabel:base.directorLabel}:{})};
 }

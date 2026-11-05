@@ -1,6 +1,7 @@
 import {toDataURL as qrDataUrl} from 'qrcode';
 import {referenceTemplates,getReferenceTemplate} from './reference-templates.ts';
 import {drawReferenceBackground} from './reference-art.ts';
+import {templateMetadata} from './template-catalogue.ts';
 import {DEFAULT_DIRECTOR,normaliseLayout,photoFrames,safeCrop,type PageLayout,type PersonalTemplate,type DirectorProfile,type PhotoPattern,type Rect,type Crop,type TextSlot} from './design-layout.ts';
 export type Slot={x:number;y:number;w:number;h?:number;size?:number;color?:string;layout?:'hero'|'grid';pattern?:PhotoPattern};
 export type DriveTemplate={id:string;name:string;fileId:string;headline:Slot;photos:Slot&{h:number};body:Slot&{h:number};photoCount?:number;director?:Rect;locked?:boolean;fixedLayout?:PageLayout};
@@ -78,17 +79,18 @@ export function drawText(g:CanvasRenderingContext2D,value:string,s:TextSlot,bold
  g.save();g.beginPath();g.rect(s.x,s.y,s.w,s.h);g.clip();
  wrapped.forEach((line,i)=>g.fillText(line,x,y+i*size*leading));g.restore();g.textAlign='left';
 }
-async function drawDirector(g:CanvasRenderingContext2D,r:Rect,profile?:DirectorProfile){
- g.save();rounded(g,r,16);g.fillStyle='#fffdf8';g.fill();g.strokeStyle='#d4b879';g.lineWidth=3;g.stroke();
+async function drawDirector(g:CanvasRenderingContext2D,r:Rect,profile?:DirectorProfile,crop?:Crop,color='#d4b879',nameSlot?:TextSlot,labelOverride?:string){
+ g.save();rounded(g,r,Math.min(20,r.w*.12));g.fillStyle='#fffdf8';g.fill();g.strokeStyle=color;g.lineWidth=3;g.stroke();
  const inset=Math.max(5,Math.min(9,r.w*.055));
  const imageRect={x:r.x+inset,y:r.y+inset,w:r.w-2*inset,h:r.h*.62};
  g.save();rounded(g,imageRect,10);g.clip();
- if(profile?.image)cover(g,await loadImage(profile.image,'โหลดรูป ผอ. ไม่สำเร็จ'),imageRect);
+ if(profile?.image)cover(g,await loadImage(profile.image,'โหลดรูป ผอ. ไม่สำเร็จ'),imageRect,crop);
  else{g.fillStyle='#e8edf1';g.fillRect(imageRect.x,imageRect.y,imageRect.w,imageRect.h);g.fillStyle='#718193';g.font=`bold ${Math.min(31,r.w*.24)}px "Noto Sans Thai",sans-serif`;g.textAlign='center';g.textBaseline='middle';g.fillText('ผอ.',r.x+r.w/2,imageRect.y+imageRect.h/2);}
  g.restore();
  // Fit both lines inside the card, including long Thai names and titles.
- const width=r.w-2*inset, center=r.x+r.w/2, label=profile?.name?.trim()||'ผู้อำนวยการ';
+ const width=r.w-2*inset, center=r.x+r.w/2, label=labelOverride?.trim()||profile?.name?.trim()||'ผู้อำนวยการ';
  const title=profile?.name?.trim()?(profile.title?.trim()||'ผู้อำนวยการโรงเรียน'):'';
+ if(nameSlot){g.restore();drawText(g,label+(title?'\n'+title:''),nameSlot,true);return;}
  const textTop=imageRect.y+imageRect.h+inset*.55, textBottom=r.y+r.h-inset*.55;
  const available=Math.max(0,textBottom-textTop), maxNameLines=title?2:2;
  let size=Math.min(20,r.w*.11,available/(title?3.2:2));let wrapped:string[]=[];
@@ -131,7 +133,9 @@ export async function renderNews(n:any,school:string,director?:DirectorProfile,l
  const images=await Promise.all(selected.map(id=>loadImage('/api/pr/image/'+id+'/full','โหลดภาพไม่สำเร็จ กรุณาลองใหม่')));
  images.forEach((im,i)=>{const r=layout.photos[i];g.fillStyle='#fff';g.fillRect(r.x-3,r.y-3,r.w+6,r.h+6);g.save();if(reference){rounded(g,r,reference.style==='geometric'?0:12);g.clip();}cover(g,im,r,n.crop?.[selected[i]]);g.restore();});
  drawText(g,n.headline||'',layout.headline,true,!!reference);drawText(g,n.body||'',layout.body);
- await drawDirector(g,layout.director,director);
+ const tone=templateMetadata({id:source,name:t?.name||reference?.name||''}).tone;
+ const cardColor=reference?.accent||({purple:'#a77abe',pink:'#ca8e9f',green:'#86a878',blue:'#85a8cf',red:'#c38a80'} as Record<string,string>)[tone||'']||'#c5a46b';
+ await drawDirector(g,layout.director,director,layout.directorCrop,cardColor,layout.directorName,layout.directorLabel);
  if(reference&&n.sourceUrl?.trim()){
   let url:URL;try{url=new URL(n.sourceUrl.trim());}catch{throw Error('ลิงก์ QR ต้องเป็น URL แบบ https:// หรือ http://');}
   if(!['https:','http:'].includes(url.protocol))throw Error('ลิงก์ QR ต้องขึ้นต้นด้วย https:// หรือ http://');
