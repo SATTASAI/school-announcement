@@ -3,11 +3,12 @@ import {referenceTemplates} from '../lib/reference-templates.ts';
 import {getNewsLayout,setPersonalTemplates,templateCapacity,isTemplateLocked,themes} from '../lib/news-render.ts';
 import {filterTemplates,EMPTY_FILTERS,fitTemplatePhotos} from '../lib/template-catalogue.ts';
 import {shuffleTemplate} from '../lib/news-layout.ts';
-assert.equal(referenceTemplates.length,30);
+assert.equal(referenceTemplates.length,40);
 assert.equal(new Set(themes.map(t=>t.id)).size,themes.length);
-const latest=referenceTemplates.slice(20);assert.equal(latest.length,10);assert.equal(new Set(latest.map(t=>JSON.stringify(t.layout))).size,10,'new layouts must be distinct');assert(latest.every(t=>t.layout.logo),'new templates declare emblem frames');
-assert.equal(themes.length,33);
-assert.deepEqual(referenceTemplates.map(t=>t.photoCount),[6,5,3,5,6,4,6,4,3,5,5,6,3,4,6,5,5,6,4,5,5,6,4,4,5,5,5,5,3,6]);
+const latest=referenceTemplates.slice(30);assert.equal(latest.length,10);assert.equal(new Set(latest.map(t=>JSON.stringify(t.layout))).size,10,'new layouts must be distinct');assert(latest.every(t=>t.layout.logo),'new templates declare emblem frames');
+const geometry=t=>JSON.stringify([t.layout.headline.x,t.layout.headline.y,t.layout.headline.w,t.layout.headline.h,t.layout.body.x,t.layout.body.y,t.layout.body.w,t.layout.body.h,t.layout.director,...t.layout.photos]);const prior=new Set(referenceTemplates.slice(0,30).map(geometry));assert(latest.every(t=>!prior.has(geometry(t))),'new layouts differ from earlier collections');
+assert.equal(themes.length,43);
+assert.deepEqual(referenceTemplates.map(t=>t.photoCount),[6,5,3,5,6,4,6,4,3,5,5,6,3,4,6,5,5,6,4,5,5,6,4,4,5,5,5,5,3,6,5,5,5,4,4,5,4,5,6,4]);
 for(const t of referenceTemplates){
  assert(isTemplateLocked(t.id));assert.equal(templateCapacity(t.id),t.photoCount);
  for(const count of [1,3,6]){
@@ -26,7 +27,7 @@ for(const t of referenceTemplates){
 }
 setPersonalTemplates([]);
 const items=[...referenceTemplates,{id:'blue',name:'น้ำเงิน · ทางการ'},{id:'drive:test',name:'เขียว',photoCount:5},{id:'local:test',name:'ส่วนตัว',personal:true,photoCount:3}];
-assert.equal(filterTemplates(items,{...EMPTY_FILTERS,category:'reference'},[],{}).length,30);
+assert.equal(filterTemplates(items,{...EMPTY_FILTERS,category:'reference'},[],{}).length,40);
 assert.equal(filterTemplates(items,{...EMPTY_FILTERS,category:'reference',count:'3'},[],{}).length,4);
 assert.equal(filterTemplates(items,{...EMPTY_FILTERS,category:'reference',tone:'green',count:'4',style:'nature'},[],{}).some(t=>t.id==='reference:08'),true);
 assert.equal(filterTemplates(items,{...EMPTY_FILTERS,query:'  ชมพู  '},[],{})[0].id,'reference:04');
@@ -42,4 +43,4 @@ assert.deepEqual(fitTemplatePhotos([2],[1,2],6),[2,1]);
 const pool=themes.map(t=>t.id);let current=pool[0],state;const seen=[current];
 for(let i=1;i<pool.length;i++){const n=shuffleTemplate(pool,current,state,()=>.35);current=n.theme;state=n.state;seen.push(current);}
 assert.deepEqual(new Set(seen),new Set(pool));
-console.log('30 locked reference templates: bounds, non-overlap, immutable frames, personal-copy lock, filter intersections, legacy templates, photo fitting and shuffle passed.');
+console.log('40 locked reference templates: bounds, non-overlap, immutable frames, personal-copy lock, filter intersections, legacy templates, photo fitting and shuffle passed.');

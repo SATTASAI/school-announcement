@@ -1,0 +1,18 @@
+import type {ReferenceTemplate} from './reference-templates.ts';
+import type {Rect,TextSlot} from './design-layout.ts';
+const r=(x:number,y:number,w:number,h:number):Rect=>({x,y,w,h});
+const t=(b:Rect,size:number,color:string,align:TextSlot['align']):TextSlot=>({...b,size,color,align,font:'Noto Sans Thai'});
+type Spec={name:string;color:string;accent:string;paper:string;tone:string;style:string;headline:Rect;body:Rect;director:Rect;photos:Rect[]};
+const specs:Spec[]=[
+ {name:'ราชพฤกษ์ · ลายไทยทอง',color:'#174b47',accent:'#d4ad68',paper:'#fbf8ed',tone:'green',style:'thai',headline:r(345,270,800,130),body:r(345,430,800,200),director:r(80,270,220,300),photos:[r(80,660,700,385),r(805,660,340,385),r(80,1070,340,385),r(445,1070,335,385),r(805,1070,340,385)]},
+ {name:'ดารารัตน์ · อาร์ตเดโค',color:'#142d53',accent:'#d9b970',paper:'#f9f7f0',tone:'blue',style:'geometric',headline:r(80,270,1065,135),body:r(80,1190,780,260),director:r(925,1175,220,300),photos:[r(80,440,515,320),r(620,440,525,320),r(80,785,340,350),r(445,785,335,350),r(805,785,340,350)]},
+ {name:'กุหลาบแชมเปญ · บุปผา',color:'#844c67',accent:'#d7b580',paper:'#fff8f5',tone:'pink',style:'floral',headline:r(80,260,760,145),body:r(80,440,760,235),director:r(925,275,220,300),photos:[r(80,715,515,355),r(620,715,525,355),r(80,1095,340,365),r(445,1095,335,365),r(805,1095,340,365)]},
+ {name:'มณีคราม · พิธีเกียรติยศ',color:'#20385d',accent:'#d2b378',paper:'#fcfaf4',tone:'blue',style:'ceremonial',headline:r(80,270,1065,135),body:r(365,445,780,220),director:r(80,445,220,300),photos:[r(365,705,780,400),r(80,780,240,325),r(80,1130,515,335),r(620,1130,525,335)]},
+ {name:'พฤกษาทอง · ธรรมชาติวิจิตร',color:'#365a42',accent:'#c4a95c',paper:'#f8faee',tone:'green',style:'nature',headline:r(750,275,395,165),body:r(750,480,395,350),director:r(835,865,220,300),photos:[r(80,275,625,415),r(80,715,625,415),r(80,1190,515,290),r(620,1190,525,290)]},
+ {name:'ไหมทอง · ลายทอร่วมสมัย',color:'#69483e',accent:'#d6ad6c',paper:'#fdf8f0',tone:'red',style:'nature',headline:r(80,1110,780,135),body:r(80,1275,780,190),director:r(925,1130,220,300),photos:[r(80,270,700,385),r(805,270,340,385),r(80,680,340,385),r(445,680,335,385),r(805,680,340,385)]},
+ {name:'มุกม่วง · บุษบาเงิน',color:'#594874',accent:'#cab8cf',paper:'#faf8fd',tone:'purple',style:'floral',headline:r(80,270,1065,135),body:r(80,445,720,240),director:r(925,445,220,300),photos:[r(80,745,1065,315),r(80,1085,340,375),r(445,1085,335,375),r(805,1085,340,375)]},
+ {name:'นิลทอง · ฉบับวารสาร',color:'#303943',accent:'#d5b66f',paper:'#faf9f4',tone:'neutral',style:'editorial',headline:r(80,270,680,170),body:r(80,480,680,330),director:r(925,270,220,300),photos:[r(800,615,345,465),r(80,850,680,330),r(80,1205,340,265),r(445,1205,315,265),r(800,1105,345,365)]},
+ {name:'โกเมน · ลายไทยประดับ',color:'#77384c',accent:'#d7b575',paper:'#fff9f2',tone:'red',style:'thai',headline:r(345,270,800,135),body:r(80,1205,780,255),director:r(80,270,220,300),photos:[r(345,445,800,340),r(80,615,220,275),r(80,915,220,250),r(345,810,385,350),r(755,810,390,350),r(925,1190,220,285)]},
+ {name:'ฟ้าเพชร · กรอบเรขศิลป์',color:'#315879',accent:'#c1a978',paper:'#f7fbfc',tone:'blue',style:'mosaic',headline:r(80,270,1065,130),body:r(365,1200,780,260),director:r(80,1180,220,300),photos:[r(80,440,1065,330),r(80,795,340,335),r(445,795,335,335),r(805,795,340,335)]},
+];
+export const schoolCollection4:ReferenceTemplate[]=specs.map((s,i)=>({id:`reference:${31+i}`,name:s.name,color:s.color,accent:s.accent,paper:s.paper,tone:s.tone,style:s.style,photoCount:s.photos.length,locked:true,layout:{logo:i%2?r(1055,55,120,120):r(65,55,120,120),headline:t(s.headline,42,'#ffffff','center'),body:t(s.body,28,s.color,'left'),director:s.director,photos:s.photos}}));

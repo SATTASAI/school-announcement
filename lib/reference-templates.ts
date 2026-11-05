@@ -1,3 +1,4 @@
+import {schoolCollection4} from './school-collection-4.ts';
 import {schoolCollection3} from './school-collection-3.ts';
 import {schoolCollection} from './school-collection.ts';
 import type {PageLayout} from './design-layout.ts';
@@ -698,5 +699,6 @@ export const referenceTemplates:ReferenceTemplate[]=[
   }
   ,...schoolCollection
   ,...schoolCollection3
+  ,...schoolCollection4
 ];
 export const getReferenceTemplate=(id:string)=>referenceTemplates.find(t=>t.id===id);
