@@ -26,5 +26,7 @@ export function validateManifest(raw:unknown,expectedFile?:string):TemplateManif
   return {...r,size:v.size,color:v.color,align:v.align,font:v.font,...(v.verticalAlign?{verticalAlign:v.verticalAlign}:{})};
  };
  if(!m.layout||!Array.isArray(m.layout.photos)||m.layout.photos.length<1||m.layout.photos.length>6)return fail('ต้องมีกรอบภาพกิจกรรม 1–6 กรอบ');
- return {schemaVersion:1,file:m.file,name:m.name.trim(),canvas:{width:1240,height:1754},layout:{...(m.layout.logo!==undefined?{logo:rect(m.layout.logo,'ตราโรงเรียน')}:{}),headline:text(m.layout.headline,'พาดหัว'),body:text(m.layout.body,'เนื้อข่าว'),director:rect(m.layout.director,'ผอ.'),photos:m.layout.photos.map((v:any,i:number)=>rect(v,'ภาพ '+(i+1)))}};
+ const crop=m.layout.directorCrop;
+ if(crop!==undefined&&(!crop||typeof crop!=='object'||!Number.isFinite(crop.x)||!Number.isFinite(crop.y)||!Number.isFinite(crop.zoom)||Math.abs(crop.x)>1||Math.abs(crop.y)>1||crop.zoom<1||crop.zoom>4))return fail('การครอปรูป ผอ. ไม่ถูกต้อง');
+ return {schemaVersion:1,file:m.file,name:m.name.trim(),canvas:{width:1240,height:1754},layout:{...(m.layout.logo!==undefined?{logo:rect(m.layout.logo,'ตราโรงเรียน')}:{}),...(m.layout.directorName!==undefined?{directorName:text(m.layout.directorName,'ชื่อ ผอ.')}:{}),...(crop!==undefined?{directorCrop:{x:crop.x,y:crop.y,zoom:crop.zoom}}:{}),headline:text(m.layout.headline,'พาดหัว'),body:text(m.layout.body,'เนื้อข่าว'),director:rect(m.layout.director,'ผอ.'),photos:m.layout.photos.map((v:any,i:number)=>rect(v,'ภาพ '+(i+1)))}};
 }
