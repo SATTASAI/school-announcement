@@ -60,5 +60,5 @@ export function photoFrames(area:Rect,count:number,pattern:PhotoPattern='hero'):
  return [{x:area.x,y:area.y,w:area.w,h:heroH},...rows({x:area.x,y:area.y+heroH+gap,w:area.w,h:area.h-heroH-gap},count-1,pattern==='ribbon'?count-1:Math.min(3,count-1))];
 }
 export function normaliseLayout(raw:Partial<PageLayout>|undefined,base:PageLayout):PageLayout{
- return {...(base.logo?{logo:base.logo}:{}),headline:safeText(raw?.headline,base.headline),body:safeText(raw?.body,base.body),director:safeRect(raw?.director,base.director),photos:base.photos.map((r,i)=>safeRect(raw?.photos?.length===base.photos.length?raw.photos[i]:undefined,r))};
+ return {...(base.logo?{logo:safeRect(raw?.logo,base.logo)}:{}),headline:safeText(raw?.headline,base.headline),body:safeText(raw?.body,base.body),director:safeRect(raw?.director,base.director),photos:base.photos.map((r,i)=>safeRect(raw?.photos?.length===base.photos.length?raw.photos[i]:undefined,r))};
 }

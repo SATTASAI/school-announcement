@@ -28,15 +28,16 @@ export function templateLogoFrame(id:string):Rect|undefined{
 }
 export function getNewsLayout(n:{theme:string;selected:number[];layout?:PageLayout}):PageLayout{
  const t=templateData(n.theme),source=templateSource(n.theme);
- const fixed=getReferenceTemplate(source);if(fixed)return structuredClone({...fixed.layout,headline:{...fixed.layout.headline,color:fixed.id==='reference:04'?fixed.color:'#ffffff'}});
- if(t?.locked&&t.fixedLayout)return structuredClone(t.fixedLayout);
+ const custom=personalTemplates.find(t=>t.id===n.theme);
+ const fixed=getReferenceTemplate(source);
+ if(fixed){const base={...fixed.layout,logo:templateLogoFrame(n.theme),headline:{...fixed.layout.headline,color:fixed.id==='reference:04'?fixed.color:'#ffffff'}};return normaliseLayout(n.layout||custom?.layout,base);}
+ if(t?.locked&&t.fixedLayout)return normaliseLayout(n.layout||custom?.layout,t.fixedLayout);
  const area=t?.photos||{x:65,y:450,w:1110,h:650,layout:source==='editorial'?'grid':'hero'};
  const h=t?.headline||{x:65,y:275,w:1110,size:42,color:themes.find(t=>t.id===source)?.color||'#143d73'};
  const b=t?.body||{x:65,y:1160,w:1110,h:470,size:28,color:'#27364a'};
  const text=(slot:Slot,height:number):TextSlot=>({x:slot.x,y:slot.y,w:slot.w,h:slot.h||height,size:slot.size||28,color:slot.color||'#27364a',align:'left',font:'Noto Sans Thai'});
  const headBottom=area.y>h.y?area.y:b.y;
- const base:PageLayout={headline:text(h,Math.max(60,Math.min(170,headBottom-h.y-24))),body:text(b,b.h||400),director:t?.director||{...DEFAULT_DIRECTOR},photos:photoFrames(area as Rect,n.selected.slice(0,6).length,(area as Slot).pattern||area.layout as PhotoPattern||'hero')};
- const custom=personalTemplates.find(t=>t.id===n.theme);
+ const base:PageLayout={...(templateLogoFrame(n.theme)?{logo:templateLogoFrame(n.theme)}:{}),headline:text(h,Math.max(60,Math.min(170,headBottom-h.y-24))),body:text(b,b.h||400),director:t?.director||{...DEFAULT_DIRECTOR},photos:photoFrames(area as Rect,n.selected.slice(0,6).length,(area as Slot).pattern||area.layout as PhotoPattern||'hero')};
  return normaliseLayout(n.layout||custom?.layout,base);
 }
 function rounded(g:CanvasRenderingContext2D,r:Rect,radius=12){g.beginPath();g.roundRect(r.x,r.y,r.w,r.h,radius);}
@@ -106,7 +107,8 @@ export async function renderNews(n:any,school:string,director?:DirectorProfile,l
  const source=templateSource(n.theme),t=templateData(n.theme),reference=getReferenceTemplate(source);
  if(source.startsWith('drive:')&&!t)throw Error('แม่แบบยังโหลดไม่เสร็จหรือไม่พบแล้ว กรุณาโหลดแม่แบบใหม่');
  g.fillStyle='#fff';g.fillRect(0,0,1240,1754);
- if(reference)drawReferenceBackground(g,reference,school,n.date||'');
+ const layout=getNewsLayout(n);
+ if(reference)drawReferenceBackground(g,{...reference,layout},school,n.date||'');
  else if(t)g.drawImage(await loadImage('/api/pr/template/'+t.fileId,'โหลดแม่แบบจาก Google Drive ไม่สำเร็จ'),0,0,1240,1754);
  else{
   const theme=themes.find(t=>t.id===source)||themes[0];
@@ -114,14 +116,13 @@ export async function renderNews(n:any,school:string,director?:DirectorProfile,l
   const headerX=logo?235:65;g.fillStyle='#fff';g.font='bold 44px "Noto Sans Thai",sans-serif';g.fillText(school||'โรงเรียนบ้านป่าเด็ง',headerX,88,logo?730:900);g.font='24px "Noto Sans Thai",sans-serif';g.fillText('จดหมายข่าวประชาสัมพันธ์ / SCHOOL NEWS',headerX,145);g.fillStyle=theme.accent;g.font='20px sans-serif';g.fillText('BAN PA DENG SCHOOL',headerX,190);
   g.fillStyle=theme.color;g.fillRect(0,1680,1240,74);g.fillStyle='#fff';g.font='20px "Noto Sans Thai",sans-serif';g.fillText('งานประชาสัมพันธ์ · '+school,65,1727);
  }
- const logoFrame=templateLogoFrame(n.theme);
+ const logoFrame=layout.logo;
  if(logo&&logoFrame){
   const im=await loadImage(logo,'โหลดตราโรงเรียนไม่สำเร็จ');
   if(reference){g.save();g.fillStyle=reference.paper;g.beginPath();g.ellipse(logoFrame.x+logoFrame.w/2,logoFrame.y+logoFrame.h/2,logoFrame.w/2-3,logoFrame.h/2-3,0,0,Math.PI*2);g.fill();g.restore();}
   const pad=reference?8:0,scale=Math.min((logoFrame.w-2*pad)/im.naturalWidth,(logoFrame.h-2*pad)/im.naturalHeight),w=im.naturalWidth*scale,h=im.naturalHeight*scale;
   g.drawImage(im,logoFrame.x+(logoFrame.w-w)/2,logoFrame.y+(logoFrame.h-h)/2,w,h);
  }
- const layout=getNewsLayout(n);
  const selected:number[]=(n.selected||[]).slice(0,6);
  if(reference&&selected.length>reference.photoCount)throw Error('แม่แบบนี้รองรับ '+reference.photoCount+' ภาพ กรุณาเลือกภาพตามจำนวนกรอบ');
  if(t?.fixedLayout&&selected.length>t.fixedLayout.photos.length)throw Error('แม่แบบนี้รองรับ '+t.fixedLayout.photos.length+' ภาพ กรุณาเลือกภาพตามจำนวนกรอบ');

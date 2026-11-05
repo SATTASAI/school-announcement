@@ -15,15 +15,15 @@ for(const t of referenceTemplates){
   const n={theme:t.id,selected:Array.from({length:count},(_,i)=>i+1)};
   const base=getNewsLayout(n);
   assert.equal(base.photos.length,t.photoCount,'fixed frames must not reflow');
-  assert.deepEqual(getNewsLayout({...n,layout:{...base,director:{x:0,y:0,w:1,h:1},photos:[]}}),base,'draft geometry cannot unlock fixed templates');
+  const changed=getNewsLayout({...n,layout:{...base,headline:{...base.headline,x:10},director:{...base.director,x:0},logo:{...base.logo,x:5}}});assert.equal(changed.headline.x,10);assert.equal(changed.director.x,0);assert.equal(changed.logo.x,5);assert.deepEqual(getNewsLayout(n),base,'original template must remain unchanged');
   const rects=[base.headline,base.body,base.director,...base.photos,...(base.logo?[base.logo]:[])];
   for(const r of rects){assert(r.x>=0&&r.y>=0&&r.w>0&&r.h>0);assert(r.x+r.w<=1240.01&&r.y+r.h<=1754.01);}
   for(let i=0;i<rects.length;i++)for(let j=i+1;j<rects.length;j++){
    const a=rects[i],b=rects[j];assert(a.x+a.w<=b.x+.01||b.x+b.w<=a.x+.01||a.y+a.h<=b.y+.01||b.y+b.h<=a.y+.01,t.id+' overlaps');
   }
  }
- const clone={id:'local:locked',name:'clone',sourceTheme:t.id,layout:getNewsLayout({theme:'blue',selected:[1,2]}),createdAt:0};
- setPersonalTemplates([clone]);assert(isTemplateLocked(clone.id));assert.equal(getNewsLayout({theme:clone.id,selected:[1]}).photos.length,t.photoCount);
+ const orig=getNewsLayout({theme:t.id,selected:[1,2]});const clone={id:'local:locked',name:'clone',sourceTheme:t.id,layout:{...orig,headline:{...orig.headline,x:10}},createdAt:0};
+ setPersonalTemplates([clone]);assert(isTemplateLocked(clone.id));assert.equal(getNewsLayout({theme:clone.id,selected:[1]}).photos.length,t.photoCount);assert.equal(getNewsLayout({theme:clone.id,selected:[1]}).headline.x,10);
 }
 setPersonalTemplates([]);
 const items=[...referenceTemplates,{id:'blue',name:'น้ำเงิน · ทางการ'},{id:'drive:test',name:'เขียว',photoCount:5},{id:'local:test',name:'ส่วนตัว',personal:true,photoCount:3}];
@@ -43,4 +43,4 @@ assert.deepEqual(fitTemplatePhotos([2],[1,2],6),[2,1]);
 const pool=themes.map(t=>t.id);let current=pool[0],state;const seen=[current];
 for(let i=1;i<pool.length;i++){const n=shuffleTemplate(pool,current,state,()=>.35);current=n.theme;state=n.state;seen.push(current);}
 assert.deepEqual(new Set(seen),new Set(pool));
-console.log('40 locked reference templates: bounds, non-overlap, immutable frames, personal-copy lock, filter intersections, legacy templates, photo fitting and shuffle passed.');
+console.log('40 locked reference templates: bounds, non-overlap, editable frames, personal-copy persistence, filter intersections, legacy templates, photo fitting and shuffle passed.');
